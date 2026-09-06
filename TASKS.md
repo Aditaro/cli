@@ -65,6 +65,34 @@ bash warden/demo.sh
 ```
 Then also run `python3 -m pytest warden/ databricks/ -q` (all tests, both dirs). Report the FULL real output (not a summary) in `## Done` below — pass/fail counts, and the actual demo.sh output showing pre/post Delta version + the logged row. If anything fails, report the exact error — don't fix it yourself, just report it clearly so Claude Code can triage fast given the time left. This is the verification evidence for the required 11:45 stable-state checkpoint, so accuracy matters more than speed here.
 
+## Now
+**Assigned: Codex — 2 tasks, ~2 hrs left total on the clock, do them in order**
+
+Pull latest first (`git pull` / re-sync your checkout) — `warden/migrate.py` has two new commits since your last run: `cc16573cc` (checkpoint privacy boundary — `context_completeness` field) and `1784305b7` (error-text hardening — a DB exception's message is now reduced to its type name, e.g. `ValueError`, before it reaches `warden.migration_log`; full error text still prints locally).
+
+### Task 1 — verify which failure path actually fires live (do this first, it's the important one)
+
+`migrations/001_add_plan_column.sql` does `ALTER TABLE ... ADD CONSTRAINT ... CHECK (plan IN (...))`. Delta validates *existing* data at `ADD CONSTRAINT` time — if row 7 (`plan='legacy'`) already violates it, the `ALTER TABLE` itself should throw before Warden ever reaches the `001_validate.sql` SELECT step. We've never confirmed this live (the one prior live run stalled before getting this far), and it changes how we should describe the mechanism to judges. Find out:
+
+```
+set -a; source .env; set +a
+bash warden/demo.sh
+```
+
+Report in `## Done` below, verbatim:
+1. Does the ALTER TABLE step itself throw an exception, or does it succeed and the *following* `001_validate.sql` SELECT catch the offending row? (Look at whether `"[warden] migration '...' applied."` prints before the failure.)
+2. The exact exception type/message Databricks/Delta gives you for the CHECK constraint violation (paste it — we want to know if it names Delta's `DELTA_VIOLATE_CONSTRAINT_WITH_VALUES` error or something else).
+3. Query the most recent row in `warden.migration_log` after the run (`SELECT * FROM warden.migration_log ORDER BY ts DESC LIMIT 1`) and paste it. Confirm the `note` column contains an exception **type name only** (e.g. `ValueError`), not a raw message with `plan = legacy` or similar embedded in it — this is what the just-hardened `error_summary()` is supposed to guarantee.
+4. Full `python3 -m pytest warden/ databricks/ -q` output.
+
+Don't fix anything yourself even if something looks off — just report exactly what you observe, including the raw exception text/log row content, so Claude Code can correct the docs and/or patch based on real evidence instead of a guess.
+
+### Task 2 — create a real Lakeview dashboard from `databricks/dashboard_queries.sql`
+
+Right now that file is just a `.sql` query sitting in the repo — there's no actual dashboard object in the workspace a judge could open. Use the `databricks-sdk` Python package (or the Databricks REST API directly via `requests`, whichever is faster for you) to create a Lakeview dashboard in the workspace containing the query in `databricks/dashboard_queries.sql` as one chart (a simple time-series/bar chart of `attempts`/`heals`/`failures` by `day` is enough — don't over-build this). Use the existing env vars for auth (`DATABRICKS_SERVER_HOSTNAME`/`HTTP_PATH`/`TOKEN`, or exchange the token for whatever the SDK needs — don't hardcode or print any credential). Put the creation script at `databricks/create_dashboard.py` (one-shot, re-runnable, prints the dashboard's workspace URL on success). Run it once for real and report the dashboard URL in `## Done`.
+
+Do NOT touch `warden/migrate.py`. Update `## Done`/`## Blocked` when finished — if Task 2 turns out to be a bigger lift than expected given the time left, report what you tried and stop; Task 1's findings matter more.
+
 ## Ground rules for every agent (Claude Code, opencode, Codex)
 - Use Entire yourself while you work, not just as something the product touches: run `entire graph search` / `entire graph impact` before changing code you didn't write, and check `entire checkpoint list` if you're unsure what's already been decided.
 - Write commit messages that capture *why*, not just *what* — rejected options, assumptions, anything you'd want a fresh session to know. Your commits are checkpoints; treat them like it.
