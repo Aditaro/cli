@@ -1,0 +1,5 @@
+Read TASKS.md — there's a "NOON CURVEBALL" section at the bottom with your
+first task. Before doing anything else, run:
+  entire checkpoint explain 0d29a022c
+to reconstruct intent, architecture, completed work, and open risks. Do not
+rely on anything except that checkpoint and the repo files.
