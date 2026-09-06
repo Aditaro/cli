@@ -73,3 +73,33 @@ i also want to assume that for the user it is easy to manage both entire and dat
 ---
 
 once you are done give me whatever information i need to give ot claude code to conclude the work that we have done here as a whole
+
+---
+
+URGENT — under 7 minutes. Ship the preflight branch, do not improve it.
+▎
+▎ In /tmp/warden-exact-submission (branch submission-operator-preflight, base fa6d0d79f), commit and push the four preflight files exactly as they are. No edits, no refactors, no additions — you already validated them; this is purely commit-and-push.
+▎
+▎ cd /tmp/warden-exact-submission
+▎ git add BUILDATHON.md requirements.txt warden/preflight.py warden/test_preflight.py
+▎ git status --short
+▎ python3 -m pytest warden/ databricks/ -q
+▎ bash warden/demo.sh --self-test; echo "selftest=$?"
+▎
+▎ Only if pytest is green and selftest=0, commit and push:
+▎
+▎ git commit -m "feat: operator preflight for Entire + Databricks readiness
+▎
+▎ One command to check both systems before a live run. Default makes no
+▎ warehouse call; --live issues only SELECT 1. Never prints credentials,
+▎ checkpoint intent, or raw database error text (errors reduce to type
+▎ name, same boundary as error_summary). Adds requirements.txt so the
+▎ project installs from a clean checkout.
+▎
+▎ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+▎ git push origin submission-operator-preflight
+▎ git rev-parse HEAD
+▎
+▎ Report the full SHA on one line as your first output — Adit needs it for the submission form immediately.
+▎
+▎ Do NOT touch safe-submission. If anything fails or is red, say so in one line and stop — we submit fa6d0d79f unchanged.
