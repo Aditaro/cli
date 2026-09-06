@@ -142,6 +142,33 @@ From Step 1, list concrete, buildable-in-under-30-minutes-each improvements. For
 
 Do NOT touch `warden/migrate.py` for this task — assessment and a list only.
 
+## Now
+**Assigned: Codex — implement your own ranked improvement list (all 5, we have the time), plus new submission-checklist items from the organizers**
+
+Your self-assessment and ranked list were good and honest — approved as-is, do all 5 in the order you ranked them. (If you're already mid-flight on one of these, keep going, don't restart.)
+
+1. `BUILDATHON.md` "reproduce and safety" paragraph (data provenance/responsible-use + demo clarity)
+2. Graph evidence for `get_latest_checkpoint` and `log_attempt` specifically (not just `demo_users`) — run both `entire graph impact` commands plus one `entire graph search`, verify each result against the actual function definitions, record real output in `BUILDATHON.md`'s "Entire Graph findings" section (not just TASKS.md)
+3. Fresh-session checkpoint reconstruction test/transcript — give a genuinely fresh session only a checkpoint ID and the repo, have it reconstruct the privacy assumption and next action, record what it actually reconstructs
+4. Deterministic no-credentials demo/self-test path
+5. Final live regression + dashboard access check, right before submission (last, not now)
+
+Additionally, the organizers just gave Adit the official **Final 20-minute checklist** and **Required submission fields**. Cross-check these against the repo — most you can verify yourself, a few need Adit directly (flagged below):
+
+**You can verify/fix these:**
+- "The project launches from a clean checkout" — actually test this: clone to a fresh temp dir, follow BUILDATHON.md's own setup instructions exactly, confirm it works with no undocumented steps.
+- "Tests covering the critical and Curveball behavior pass" — already true (16 passed), just reconfirm after your 5 improvements above.
+- "BUILDATHON.md is complete, readable and free of secrets" — reread it end to end for secrets (I already grepped for obvious token patterns and found none, but you have fresh eyes) and for the exact required outline: `# Project name`, one-sentence summary, problem/user, track+why Entire essential, architecture, Entire Graph findings, curveball, checkpoint links, setup/run/test, Databricks use, known limitations. We already have all these sections — just confirm nothing's missing or stale after your edits above.
+- "Databricks resource links and data notes are included" — confirm the live dashboard URL and data-provenance note (item 1 above) are both actually in BUILDATHON.md, not just TASKS.md.
+- "A fallback screenshot or recording is locally available" — the organizers explicitly warn Free Edition compute can go unavailable ("preserve a screenshot or recording of any fragile live step... if live infrastructure fails during judging, explain the expected behavior, show the prepared evidence and continue"). We have verbatim text output from a successful live run in TASKS.md, but that's not a screenshot/recording. Cheapest fix: use `script` or `asciinema` to record one full successful `bash warden/demo.sh` run to a file in the repo (e.g. `warden/demo-recording.txt` or a cast file), so there's actual replayable evidence beyond a copy-pasted log. Keep it small, no secrets in it (verify: it must not contain the token, `.env` contents, or full checkpoint intent if that reveals anything sensitive).
+
+**Flag back to Adit, don't try to fill these in yourself (org/account-specific, not something in the repo):**
+- GitHub fork URL + final commit SHA for the submission form (SHA will be whatever's at HEAD when we submit — note this needs to be grabbed last, after all other work lands)
+- Entire mirror or project URL (submission form field — check if this is something `entire repo mirror list` or similar already shows, and report what you find, but don't guess at the answer)
+- Confirming the actual submission form itself gets filled out and sent before 3pm — that's on Adit, not an agent task
+
+Update `## Done` when finished.
+
 ## Ground rules for every agent (Claude Code, opencode, Codex)
 - Use Entire yourself while you work, not just as something the product touches: run `entire graph search` / `entire graph impact` before changing code you didn't write, and check `entire checkpoint list` if you're unsure what's already been decided.
 - Write commit messages that capture *why*, not just *what* — rejected options, assumptions, anything you'd want a fresh session to know. Your commits are checkpoints; treat them like it.
@@ -153,6 +180,95 @@ Do NOT touch `warden/migrate.py` for this task — assessment and a list only.
 - `warden.demo_users` is the one migration target for the demo. Keep scope to ONE table, ONE migration, ONE validation check — this is a narrow vertical slice, not a general migration framework.
 
 ## Done
+- **Codex (rubric self-assessment; no implementation changes):**
+
+  ### Entire main challenge — 100 points
+
+  - **Problem and innovation — 8/10.** Warden gives a concrete migration
+    operator a useful self-healing guard: impact evidence, validation, Delta
+    rollback, and checkpoint-linked explanation. A skeptical judge may view it
+    as a narrow but polished demo rather than a broadly novel migration
+    product, because it covers one table and one migration.
+  - **Technical implementation — 8/10.** The end-to-end path is real and live:
+    Databricks Delta, migration execution, failure handling, time travel, safe
+    logging, and 16 regression tests. Deductions: the version lookup and schema
+    compatibility paths are now tested in unit isolation, but not every
+    warehouse/network failure mode has a live integration test.
+  - **Response to the Curveball — 9/10.** Raw intent was moved behind
+    `LocalOnlyText`, `context_completeness` distinguishes incomplete evidence,
+    DB exception text is reduced before logging, and the live row proves the
+    boundary. The remaining deduction is that the demo still prints complete
+    intent locally, which is safe by design but needs a clear operator-facing
+    explanation to avoid confusion about the boundary.
+  - **Use of Entire Checkpoints — 7/10.** Warden consumes a real checkpoint,
+    and commits have useful checkpoint summaries, including the live error and
+    dashboard work. The rubric's fresh-session criterion is not directly
+    demonstrated: no separate fresh agent was given only a checkpoint ID and
+    asked to reconstruct and continue.
+  - **Use of Entire Graph — 6/10.** The workflow runs Graph impact before the
+    migration, and source/tests verify the reported degenerate `demo_users`
+    result. However, the strongest curveball-relevant impact run on
+    `get_latest_checkpoint`/`log_attempt` is not captured as a complete,
+    reproducible artifact in the board; the live `demo_users` result is weaker
+    evidence for the privacy-boundary changes.
+  - **Demonstration and future potential — 8/10.** `warden/demo.sh`, live
+    output, the dashboard URL, and documented limitations make judging easy.
+    The demo is intentionally narrow and the dashboard is a single chart, so
+    the future platform story is credible but not yet proven beyond the slice.
+
+  ### Best Use of Databricks — 100 points
+
+  - **Meaningful use — 9/10.** Delta time travel is load-bearing for the heal,
+    and Delta's native `CHECK` enforcement is the observed failure trigger;
+    this is materially more than generic SQL storage. The deduction is that
+    the rest of the connector/logging path could be ported to another SQL
+    warehouse.
+  - **Working implementation and reliability — 8/10.** The real warehouse run
+    proves the failure, rollback, sanitized log row, and post-version match;
+    the integration tests and rerunnable dashboard improve reproducibility.
+    A judge may still dock points because setup/seed execution and dashboard
+    access depend on live credentials and workspace permissions.
+  - **User value and product decisions — 8/10.** The focused scope makes the
+    migration safety story understandable and the operator gets a clear heal
+    plus local diagnostic. One table/one migration is a deliberate trade-off,
+    but limits evidence of general usefulness.
+  - **Data quality, provenance and responsible use — 8/10.** The seed is
+    synthetic, uses reserved `example.invalid` addresses, documents the
+    `legacy` offender, and the external log avoids intent and row-value leaks.
+    A skeptical judge may want the synthetic-data statement surfaced more
+    prominently in `BUILDATHON.md`, not mainly in setup/task documentation.
+  - **Curveball response — 9/10.** The Databricks-backed path explicitly
+    records completeness and safe error summaries, and live evidence confirms
+    `ServerOperationError` rather than raw details in `migration_log`. The
+    remaining gap is broader live coverage for redacted/unavailable checkpoint
+    states; those are unit-tested, not warehouse-demonstrated.
+
+  ### Ranked improvements by points-per-minute
+
+  1. **Add a small `BUILDATHON.md` “reproduce and safety” paragraph** — helps
+     Databricks data provenance/responsible use (15) and demo clarity (10);
+     ~10 minutes. Explicitly state synthetic-only data, the `legacy` seed
+     offender, Delta `CHECK` enforcement, time-travel healing, and that full
+     intent/error text stays local.
+  2. **Capture Graph evidence for `get_latest_checkpoint` and `log_attempt`** —
+     helps Entire Graph (15) and technical implementation (25); ~15 minutes.
+     Run both impact commands plus one focused search, verify each result
+     against definitions/tests, and record the outputs in `TASKS.md`.
+  3. **Add a fresh-session checkpoint reconstruction smoke test/documented
+     transcript** — helps Checkpoint use (15) and curveball response (15);
+     ~20 minutes. Give a fresh agent only the latest checkpoint ID and repo,
+     require it to recover the privacy assumption and next action, and record
+     what it reconstructs.
+  4. **Add a deterministic no-credentials demo/self-test path** — helps demo
+     and reliability (10/25); ~20 minutes. Keep the real path unchanged, but
+     make the judge-facing setup validate required env vars and explain the
+     exact live commands/permission prerequisites before connecting.
+  5. **Run one final live regression immediately before submission and record
+     the dashboard HTTP/access result** — helps demonstration (10) and
+     Databricks reliability (25); ~10 minutes, assuming credentials remain
+     available. This is verification rather than new behavior, but closes the
+     remaining stale-evidence risk.
+
 - **opencode:** Added `databricks/setup.sql`, `databricks/seed.py`, and
   `databricks/dashboard_queries.sql`.
   - `setup.sql`: `CREATE TABLE IF NOT EXISTS warden.demo_users (id BIGINT, email
