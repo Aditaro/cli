@@ -93,6 +93,19 @@ Right now that file is just a `.sql` query sitting in the repo — there's no ac
 
 Do NOT touch `warden/migrate.py`. Update `## Done`/`## Blocked` when finished — if Task 2 turns out to be a bigger lift than expected given the time left, report what you tried and stop; Task 1's findings matter more.
 
+## Now
+**Assigned: Codex — final task, this is the closing checkpoint for the whole Noon Curveball**
+
+You're the right agent for this one — you did the live verification and the bug fixes, so you have the most direct evidence to draw on. The original curveball instructions (bottom of this file, "NOON CURVEBALL" section) ask for a final checkpoint that explains:
+1. The assumption that changed (raw checkpoint intent → external Databricks log was assumed safe; it wasn't).
+2. What changed (in your own words, from what you actually touched): `context_completeness` field, `LocalOnlyText` structural wrapper so intent can't leak by accident, `error_summary()` closing the same-shape leak for raw DB exception text, plus the two real bugs you fixed (silent ALTER TABLE failure swallowing, `pre_version` UnboundLocalError) and the redaction-regex tightening.
+3. Why it's safe now — cite your own live verification: `DELTA_NEW_CHECK_CONSTRAINT_VIOLATION` fires, gets reduced to `ServerOperationError` in the logged note, `context_completeness=complete`, no raw intent or row values present in `warden.migration_log`.
+4. That existing (non-redacted) behavior still works — 16 tests passing, `demo.sh` exit 0, `pytest` exit 0.
+
+Do this as a normal commit with a message covering those four points (Entire's hooks will checkpoint it automatically the way every other commit today has been checkpointed — no special command needed beyond committing normally). If there's nothing left uncommitted in your working tree to commit, that's fine — just confirm in `## Done` that your prior commits already cover this and note the checkpoint ID(s) they produced (check `entire checkpoint list` for the ones tied to your recent commits).
+
+Update `## Done` when finished — this is likely the last task before submission, so also flag anything you think still needs attention before 3pm.
+
 ## Ground rules for every agent (Claude Code, opencode, Codex)
 - Use Entire yourself while you work, not just as something the product touches: run `entire graph search` / `entire graph impact` before changing code you didn't write, and check `entire checkpoint list` if you're unsure what's already been decided.
 - Write commit messages that capture *why*, not just *what* — rejected options, assumptions, anything you'd want a fresh session to know. Your commits are checkpoints; treat them like it.
