@@ -1,0 +1,91 @@
+Good scope for a one-day build
+An AI app or agent using Databricks Apps, hosted foundation models, model serving or AI Search where available.
+An analytics experience using notebooks, SQL, dashboards or Genie to answer a concrete question.
+A data pipeline that ingests, cleans and transforms representative data into a useful result.
+A data-backed application using Lakehouse data and Databricks Apps for the user experience.
+An ML experiment that uses a reproducible dataset, experiment tracking and an evaluation result.
+Free Edition constraints to design around
+Area
+Planning constraint
+Service model
+No-cost, serverless, quota-limited environment for non-commercial learning and prototyping; no production SLA.
+SQL and jobs
+One serverless 2X-Small SQL warehouse; up to five concurrent job tasks per account.
+Pipelines
+One active pipeline per supported pipeline type.
+Models and AI Search
+Endpoint, throughput and model availability limits apply; no GPU or provisioned throughput; AI Search is limited.
+Apps and database
+Up to three Apps, with idle auto-stop behavior; one Lakebase project where available.
+Workspace
+One workspace and one metastore per account; several account-level and enterprise controls are unavailable.
+Quota
+When quota is exhausted, affected compute may be unavailable for the rest of the day or month. Build and test your narrow path early.
+
+
+Work locally when practical, deploy one narrow slice early and preserve a screenshot or recording of any fragile live step. If live infrastructure fails during judging, explain the expected behavior, show the prepared evidence and continue with the product story.
+Databricks Free Edition overview
+Current Databricks Free Edition limitations
+Responsible use of AI and data
+Do not upload confidential company information, customer data, passwords, private keys or personal data that you do not have permission to use.
+Do not put secrets in prompts, source repositories, screenshots, checkpoint context or BUILDATHON.md.
+Verify generated code, SQL, citations and outputs. Test the cases that matter to your user and disclose what remains unverified.
+Explain your data sources, permitted use, sampling or transformation, and important limitations.
+Clearly label synthetic, cached, mocked or prototype data and responses.
+You remain accountable for the implementation, even when a coding agent created it. Every teammate presenting should understand the relevant code and product decisions.
+
+Final 20-minute checklist
+The final commit is pushed and the SHA matches the submission.
+The project launches from a clean checkout or the documented setup path.
+Required checkpoints open and clearly explain the four milestones.
+Entire Graph evidence and the final semantic-diff analysis are recorded.
+BUILDATHON.md is complete, readable and free of secrets.
+Tests covering the critical and Curveball behavior pass.
+Databricks resource links and data notes are included if you opted in.
+The demo owner can sign in, open every resource and run the critical path.
+A fallback screenshot or recording is locally available.
+The submission is sent before 3:00 PM IST.
+
+Code of Conduct and safety
+All participants must follow the Bengaluru Tech Week Code of Conduct. Treat teammates, organisers, mentors, judges, venue staff and other participants with respect. Report harassment, unsafe behavior, accessibility barriers or urgent welfare issues to the event desk. For non-urgent questions, write to hello@bengalurutechweek.com.
+Read the Bengaluru Tech Week Code of Conduct
+
+
+
+Submission package
+Submit one project before 3:00 PM IST. Late or incomplete submissions may not reach judging. Open every link in a private or signed-out browser where appropriate, and make sure judges have the access they need without receiving a private credential.
+Required submission fields
+Selected Entire track.
+GitHub fork URL and final commit SHA.
+Entire mirror or project URL.
+Links to the required Entire Checkpoints.
+Clear setup, run and test instructions.
+Working product demonstration or a reliable fallback recording.
+A complete BUILDATHON.md file in the repository root.
+If opting into Best Use of Databricks: the Databricks capabilities used, why they are essential, workspace/app/endpoint/demo URL, relevant repository paths, reproduction steps, data provenance and how the Curveball affected the Databricks workflow.
+
+BULDATHON.md outline
+# Project name
+## One-sentence summary
+## Problem, intended user and why it matters
+## Selected Entire track and why Entire is essential
+## Architecture and main workflow
+## Entire Graph findings and verification
+## Noon Curveball: what changed and how we adapted
+## Checkpoint links and what each checkpoint proves
+## Setup, run and test instructions
+## Databricks use, data sources and limitations (if applicable)
+## Known limitations and next steps
+
+Final demo readiness
+State the user and problem in one sentence.
+Show the working product and the critical path, rather than a slide-only walkthrough.
+Explain why Entire is essential to the solution.
+Show one useful checkpoint and one graph finding that changed or verified a decision.
+Explain the Noon Curveball, the behavior that changed and the test that proves it.
+If opting into Databricks, show the essential Databricks function and the evidence that it is working.
+Close with known limitations and the next step toward production readiness.
+
+---
+
+codex is also working right now
