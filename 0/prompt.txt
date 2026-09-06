@@ -107,3 +107,63 @@ URGENT — under 7 minutes. Ship the preflight branch, do not improve it.
 ---
 
 can you set everything here so that i can set this up on vercel on an app so that i can send it as a visual link claude code is working on a slide deck parallely
+
+---
+
+its only letting me doing main, not the cli branch
+
+---
+
+15:25:53.271 Running build in Washington, D.C., USA (East) – iad1
+15:25:53.272 Build machine configuration: 2 cores, 8 GB
+15:25:53.445 Cloning github.com/Aditaro/cli (Branch: main, Commit: 57db187)
+15:25:53.446 Previous build caches not available.
+15:25:54.893 Cloning completed: 1.448s
+15:25:55.538 Running "vercel build"
+15:25:55.561 Vercel CLI 59.11.7
+15:25:56.378 Installing dependencies...
+15:25:56.942 Using CPython 3.14.7
+15:25:57.055 Resolved 22 packages in 112ms
+15:25:57.061 Downloading pandas (10.5MiB)
+15:25:57.063 Downloading lz4 (1.3MiB)
+15:25:57.064 Downloading pygments (1.2MiB)
+15:25:57.069 Downloading numpy (15.9MiB)
+15:25:57.154  Downloaded lz4
+15:25:57.364  Downloaded pygments
+15:25:57.598  Downloaded numpy
+15:25:57.651  Downloaded pandas
+15:25:57.652 Prepared 22 packages in 596ms
+15:25:57.653 warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+15:25:57.654          If the cache and target directories are on different filesystems, hardlinking may not be supported.
+15:25:57.654          If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+15:25:57.923 Installed 22 packages in 270ms
+15:25:57.924  + certifi==2026.7.22
+15:25:57.924  + charset-normalizer==3.5.1
+15:25:57.924  + databricks-sql-connector==4.5.0
+15:25:57.924  + et-xmlfile==2.0.0
+15:25:57.924  + idna==3.19
+15:25:57.924  + iniconfig==2.3.0
+15:25:57.924  + lz4==4.4.5
+15:25:57.924  + numpy==2.5.2
+15:25:57.924  + oauthlib==3.3.1
+15:25:57.924  + openpyxl==3.1.5
+15:25:57.924  + packaging==26.3
+15:25:57.924  + pandas==3.0.5
+15:25:57.924  + pluggy==1.6.0
+15:25:57.924  + pybreaker==1.4.1
+15:25:57.925  + pygments==2.21.0
+15:25:57.925  + pyjwt==2.13.0
+15:25:57.925  + pytest==9.1.1
+15:25:57.925  + python-dateutil==2.9.0.post0
+15:25:57.925  + requests==2.34.2
+15:25:57.925  + six==1.17.0
+15:25:57.925  + thrift==0.24.0
+15:25:57.925  + urllib3==2.7.0
+15:25:57.933 Serving the dependency-free Warden showcase
+15:25:57.959 Downloading go: https://dl.google.com/go/go1.26.6.linux-amd64.tar.gz
+15:26:16.427 Could not find an exported function in "api/checkpoint/doc.go"
+15:26:16.428 Learn more: https://vercel.com/docs/functions/serverless-functions/runtimes/go
+15:26:16.428       
+15:26:16.436 Error: Could not find an exported function in "api/checkpoint/doc.go"
+15:26:16.436 Learn more: https://vercel.com/docs/functions/serverless-functions/runtimes/go
+15:26:16.436
