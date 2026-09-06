@@ -1,0 +1,387 @@
+<title>Warden Migration Guard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  :root{
+    --ground:#0F1620;
+    --surface:#18222F;
+    --surface-2:#1F2C3C;
+    --line:#2A3949;
+    --ink:#E9EEF5;
+    --ink-2:#B8C7D9;
+    --muted:#8CA0B8;
+    --safe:#4DD4AC;
+    --safe-dim:#1E4A42;
+    --warn:#E8825A;
+    --warn-dim:#4A2A20;
+    --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+    --serif:'IBM Plex Serif',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--ground);color:var(--ink);
+    font-family:var(--sans);font-size:16px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .deck{position:relative}
+  .slide{
+    display:none;min-height:100vh;padding:clamp(28px,5vw,80px) clamp(24px,6vw,110px) 96px;
+    flex-direction:column;justify-content:center;max-width:1220px;margin:0 auto;
+  }
+  .slide.on{display:flex}
+  @media print{.slide{display:flex!important;page-break-after:always;min-height:auto}}
+
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 18px;display:flex;align-items:center;gap:12px;
+  }
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--line);max-width:220px}
+
+  h1{
+    font-size:clamp(38px,6.2vw,76px);line-height:1.02;margin:0 0 22px;font-weight:600;
+    letter-spacing:-.025em;text-wrap:balance;
+  }
+  h2{
+    font-size:clamp(28px,3.9vw,46px);line-height:1.1;margin:0 0 20px;font-weight:600;
+    letter-spacing:-.02em;text-wrap:balance;
+  }
+  h3{font-size:17px;margin:0 0 8px;font-weight:600;letter-spacing:-.005em}
+  p{margin:0 0 16px;max-width:66ch;color:var(--ink-2)}
+  .lede{font-size:clamp(18px,2.1vw,23px);line-height:1.45;color:var(--ink);max-width:30ch}
+  .sub{font-size:15px;color:var(--muted);max-width:70ch}
+  strong{color:var(--ink);font-weight:600}
+  .safe{color:var(--safe)}
+  .warn{color:var(--warn)}
+  code,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  p code,li code{
+    font-size:.88em;background:var(--surface-2);padding:1px 5px;border-radius:3px;color:var(--ink);
+  }
+
+  /* ---- Delta version rail: the product's core claim, used as the visual signature ---- */
+  .rail{display:flex;align-items:stretch;gap:0;margin:30px 0 8px;flex-wrap:wrap}
+  .rail-step{
+    flex:1 1 150px;min-width:0;padding:14px 16px;background:var(--surface);
+    border-top:2px solid var(--line);position:relative;
+  }
+  .rail-step.is-warn{border-top-color:var(--warn);background:var(--warn-dim)}
+  .rail-step.is-safe{border-top-color:var(--safe);background:var(--safe-dim)}
+  .rail-v{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.01em}
+  .rail-l{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .rail-step.is-warn .rail-v,.rail-step.is-warn .rail-l{color:var(--warn)}
+  .rail-step.is-safe .rail-v,.rail-step.is-safe .rail-l{color:var(--safe)}
+
+  /* ---- terminal evidence ---- */
+  .term{
+    background:#0A1017;border:1px solid var(--line);border-radius:5px;
+    font-family:var(--mono);font-size:clamp(11px,1.15vw,14px);line-height:1.65;
+    padding:16px 18px;overflow-x:auto;color:var(--ink-2);margin:0 0 14px;
+  }
+  .term .c{color:var(--muted)}
+  .term .g{color:var(--safe)}
+  .term .r{color:var(--warn)}
+  .term .w{color:var(--ink);font-weight:500}
+  .annot{
+    font-size:13px;color:var(--muted);border-left:2px solid var(--safe);
+    padding-left:12px;margin:0 0 18px;max-width:62ch;
+  }
+
+  .grid{display:grid;gap:16px;margin:22px 0 0}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .card{background:var(--surface);padding:20px;border-radius:5px;border:1px solid var(--line)}
+  .card p{margin:0;font-size:14px;color:var(--muted);max-width:none}
+  .card .tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--safe);margin:0 0 10px;display:block;
+  }
+  .card.warnc .tag{color:var(--warn)}
+
+  ul.clean{list-style:none;padding:0;margin:18px 0 0;display:flex;flex-direction:column;gap:13px;max-width:74ch}
+  ul.clean li{padding-left:22px;position:relative;color:var(--ink-2);font-size:15px}
+  ul.clean li::before{
+    content:"";position:absolute;left:0;top:9px;width:7px;height:7px;
+    background:var(--safe);border-radius:1px;
+  }
+  ul.clean li.no::before{background:var(--warn)}
+  ul.clean li b{color:var(--ink);font-weight:600}
+
+  .split{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:34px;align-items:start}
+
+  .kpi{display:flex;gap:36px;flex-wrap:wrap;margin:26px 0 0}
+  .kpi div{min-width:110px}
+  .kpi .n{font-family:var(--mono);font-size:clamp(26px,3.4vw,40px);font-weight:600;letter-spacing:-.02em;line-height:1}
+  .kpi .k{font-size:12px;color:var(--muted);margin-top:7px;letter-spacing:.04em}
+
+  .quote{
+    font-family:var(--serif);font-size:clamp(20px,2.7vw,32px);line-height:1.35;
+    font-style:italic;color:var(--ink);max-width:24ch;margin:0 0 8px;
+  }
+
+  /* ---- chrome ---- */
+  .bar{
+    position:fixed;left:0;right:0;bottom:0;height:56px;background:rgba(15,22,32,.94);
+    border-top:1px solid var(--line);display:flex;align-items:center;
+    padding:0 clamp(16px,4vw,40px);gap:18px;z-index:20;backdrop-filter:blur(8px);
+  }
+  .bar .name{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .prog{flex:1;display:flex;gap:4px;max-width:520px}
+  .prog button{
+    flex:1;height:3px;background:var(--line);border:0;padding:0;cursor:pointer;
+    transition:background .18s;border-radius:2px;
+  }
+  .prog button[aria-current="true"]{background:var(--safe)}
+  .prog button:hover{background:var(--ink-2)}
+  .prog button:focus-visible,.nav button:focus-visible{outline:2px solid var(--safe);outline-offset:3px}
+  .nav{display:flex;align-items:center;gap:6px}
+  .nav button{
+    background:var(--surface);color:var(--ink-2);border:1px solid var(--line);
+    width:32px;height:30px;border-radius:4px;cursor:pointer;font-size:14px;line-height:1;
+  }
+  .nav button:hover{border-color:var(--safe);color:var(--safe)}
+  .count{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:48px;text-align:right;font-variant-numeric:tabular-nums}
+  @media print{.bar{display:none}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="deck">
+
+<!-- 1 ------------------------------------------------------------------ -->
+<section class="slide on">
+  <p class="eyebrow">Bengaluru Tech Week Buildathon · Entire Track 1</p>
+  <h1>Warden</h1>
+  <p class="lede">A migration guard that doesn't just roll back — it tells you what the migration was <em>trying</em> to do.</p>
+  <div class="rail" aria-label="Delta version through a failed migration">
+    <div class="rail-step"><div class="rail-v">v153</div><div class="rail-l">Before — table healthy</div></div>
+    <div class="rail-step is-warn"><div class="rail-v">✕ CHECK</div><div class="rail-l">Constraint violated by 1 row</div></div>
+    <div class="rail-step is-safe"><div class="rail-v">v153</div><div class="rail-l">Healed — time-travel restore</div></div>
+  </div>
+  <p class="sub">Every figure in this deck is real output from a live Databricks warehouse, captured today.</p>
+</section>
+
+<!-- 2 ------------------------------------------------------------------ -->
+<section class="slide">
+  <p class="eyebrow">The problem</p>
+  <h2>A failed migration reverts the data<br>and forgets the reason.</h2>
+  <div class="split">
+    <div>
+      <p>Migrations fail in production constantly. The standard response is a blind revert: the schema goes back, and every trace of <em>why</em> the change was attempted disappears with it.</p>
+      <p>The engineer picking up the incident reconstructs intent from a diff and a commit message — at the worst possible moment, under time pressure.</p>
+    </div>
+    <div>
+      <p class="quote">Git shows what changed. It doesn't show what you were trying to achieve.</p>
+      <p class="sub">Warden's user: anyone shipping schema or data migrations who wants recovery that explains itself.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 ------------------------------------------------------------------ -->
+<section class="slide">
+  <p class="eyebrow">How it works · one command</p>
+  <h2>Checkpoint → impact → apply → validate → heal → explain</h2>
+  <div class="grid g3">
+    <div class="card"><span class="tag">01 · Read intent</span><h3>Entire checkpoint</h3><p>Pull the recorded intent for this change via <code>entire checkpoint explain</code> — before anything touches the warehouse.</p></div>
+    <div class="card"><span class="tag">02 · Blast radius</span><h3>Entire Graph impact</h3><p>Run impact analysis on the affected symbol first, so the risk is known before it's taken.</p></div>
+    <div class="card"><span class="tag">03 · Apply</span><h3>Delta migration</h3><p>Record the pre-migration Delta version, then execute.</p></div>
+    <div class="card warnc"><span class="tag">04 · Validate</span><h3>Fail fast</h3><p>Delta's own <code>CHECK</code> enforcement catches the bad row — validation is not our code guessing.</p></div>
+    <div class="card"><span class="tag">05 · Heal</span><h3>Time-travel restore</h3><p><code>RESTORE TABLE … TO VERSION AS OF</code> — a metadata operation, not a data rewrite.</p></div>
+    <div class="card"><span class="tag">06 · Explain</span><h3>Intent, locally</h3><p>Surface the recorded intent to the operator so the next migration is corrected, not re-attempted blindly.</p></div>
+  </div>
+</section>
+
+<!-- 4 ------------------------------------------------------------------ -->
+<section class="slide">
+  <p class="eyebrow">Live evidence · <span class="mono">bash warden/demo.sh</span></p>
+  <h2>The whole loop, against a real warehouse</h2>
+  <div class="term"><span class="c">[warden]</span> 'warden.demo_users' currently at Delta version <span class="w">153</span>
+<span class="c">[warden]</span> <span class="r">FAILURE: [DELTA_NEW_CHECK_CONSTRAINT_VIOLATION] 1 rows in</span>
+<span class="r">          workspace.warden.demo_users violate the new CHECK constraint</span>
+<span class="r">          (plan IN ('free', 'pro', 'enterprise'))</span>
+<span class="c">[warden]</span> healing: restoring 'warden.demo_users' to Delta version <span class="w">153</span> via time-travel…
+
+<span class="c">──</span> most recent row in warden.migration_log <span class="c">──</span>
+status=<span class="g">'healed'</span>  context_completeness=<span class="g">'complete'</span>
+note=<span class="w">'migration failed (ServerOperationError); rolled back warden.demo_users</span>
+<span class="w">      to Delta version 153. Checkpoint intent and full error detail kept</span>
+<span class="w">      local-only (context: complete); see operator console for detail.'</span>
+
+<span class="c">──</span> post-migration Delta version <span class="c">──</span>
+Delta version: <span class="g">153</span>   <span class="c">← matches pre-migration: the heal actually happened</span></div>
+  <p class="annot">Note what is <em>absent</em> from that log row: no raw checkpoint intent, and no raw database error text — only the exception's type name. That is the Curveball response, visible in production data.</p>
+</section>
+
+<!-- 5 ------------------------------------------------------------------ -->
+<section class="slide">
+  <p class="eyebrow">Track 1 · why Entire is essential</p>
+  <h2>Checkpoint-<em>driven</em>, not checkpoint-<em>logged</em>.</h2>
+  <div class="split">
+    <div>
+      <p>The distinction is the whole product. Plenty of tools write a checkpoint as a side effect. Warden <strong>reads</strong> one to make the recovery useful.</p>
+      <ul class="clean">
+        <li><b>Without the checkpoint</b> — a revert, and an engineer reconstructing intent by hand.</li>
+        <li><b>With it</b> — a recovery that states what was attempted and why, so the corrected migration is the next step.</li>
+      </ul>
+    </div>
+    <div>
+      <p class="quote">The healing decision depends on the checkpoint. Remove Entire and the feature is gone, not degraded.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6 ------------------------------------------------------------------ -->
+<section class="slide">
+  <p class="eyebrow">Noon Curveball · Track 1 privacy boundary</p>
+  <h2>The assumption that broke</h2>
+  <p class="lede" style="max-width:52ch">We had been writing the full checkpoint intent into <code>migration_log</code> — a Databricks table, outside Entire's local boundary. "More context in the log is better" became wrong.</p>
+  <div class="grid g3">
+    <div class="card"><span class="tag">Fix 01</span><h3><code>context_completeness</code></h3><p>Every row is labelled <span class="mono">complete</span> / <span class="mono">redacted</span> / <span class="mono">unavailable</span>, so partial context can never be mistaken for whole.</p></div>
+    <div class="card"><span class="tag">Fix 02</span><h3><code>LocalOnlyText</code></h3><p>Intent is wrapped so leaking it is a <em>type</em> error. Its <code>str()</code> returns a placeholder — a careless future call site gets a placeholder, not a leak.</p></div>
+    <div class="card"><span class="tag">Fix 03</span><h3><code>error_summary()</code></h3><p>Reviewing our own fix found the same leak through another door: Delta errors can embed row values. Exceptions now cross the boundary as a type name only.</p></div>
+  </div>
+  <p class="annot">Fix 03 wasn't in the brief. It came from asking where <em>else</em> the same shape of leak could occur — and it was already there.</p>
+</section>
+
+<!-- 7 ------------------------------------------------------------------ -->
+<section class="slide">
+  <p class="eyebrow">Entire Graph · evidence, verified against tests</p>
+  <h2>The Graph named the exact function the Curveball was about</h2>
+  <div class="term"><span class="c">$ entire graph diff --base b8c9fe619 --head HEAD</span>
+
+warden/migrate.py <span class="c">(Python)</span>
+  <span class="g">+ class LocalOnlyText added</span>
+  <span class="g">+ function classify_completeness added</span>
+  <span class="g">+ function error_summary added</span>
+  ~ function get_latest_checkpoint body changed <span class="c">(6 dependents)</span>
+  <span class="w">~ function log_attempt signature changed  (2 dependents)</span>
+  ~ function apply_migration body changed <span class="c">(4 dependents)</span></div>
+  <ul class="clean">
+    <li><b>That signature change <em>is</em> the privacy boundary</b> — <code>log_attempt</code> gained the <code>context_completeness</code> parameter, and it is the one function that writes to the external service.</li>
+    <li><b>Its 2 dependents</b> are exactly the applied and healed call sites we had to change — each covered by a test.</li>
+    <li><b>Verified, not quoted</b> — every edge named here is pinned by a test in <code>test_migrate.py</code>.</li>
+  </ul>
+</section>
+
+<!-- 8 ------------------------------------------------------------------ -->
+<section class="slide">
+  <p class="eyebrow">Entire Checkpoints · the resume criterion</p>
+  <h2>A fresh session really did resume from a checkpoint — this one.</h2>
+  <p>The rubric asks whether a fresh session can pick the work up from a checkpoint. We didn't stage a demonstration of that. It is <em>how the Curveball response was built</em>, and the commit history shows it:</p>
+  <div class="rail">
+    <div class="rail-step"><div class="rail-v">0d29a02</div><div class="rail-l">Prior session deliberately stopped at a stable point</div></div>
+    <div class="rail-step"><div class="rail-v">cold start</div><div class="rail-l">New session, no memory — first action: <span class="mono">checkpoint explain</span></div></div>
+    <div class="rail-step is-safe"><div class="rail-v">cc16573 →</div><div class="rail-l">Reconstructed intent, ran impact, shipped the privacy boundary</div></div>
+  </div>
+  <p class="sub" style="margin-top:20px">It reconstructed the architecture, located the offending assumption, ran Graph impact <em>before</em> editing, and implemented the fix with tests. Every commit from <code>cc16573cc</code> onward is that session's output. <code>warden/resume_report.py</code> is that capability productised — it tells an operator whether context is complete enough to proceed, without exposing the checkpoint text itself.</p>
+</section>
+
+<!-- 9 ------------------------------------------------------------------ -->
+<section class="slide">
+  <p class="eyebrow">Best Use of Databricks · an honest accounting</p>
+  <h2>What is load-bearing, and what isn't</h2>
+  <div class="split">
+    <div>
+      <h3 class="safe" style="font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px">Genuinely Databricks</h3>
+      <ul class="clean">
+        <li><b>Delta time-travel is the rollback.</b> <code>RESTORE TABLE … TO VERSION AS OF</code> — metadata-only, which is why it scales to large tables.</li>
+        <li><b>Delta CHECK enforcement is the failure trigger.</b> The constraint validates existing rows at <code>ADD CONSTRAINT</code> time — the migration fails there, not in our code.</li>
+        <li><b>Lakeview dashboard</b> — a real workspace object over <code>migration_log</code>, built through the REST API.</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="warn" style="font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px">Portable, and we'll say so</h3>
+      <ul class="clean">
+        <li class="no"><b>The connector and logging path</b> would work against any SQL warehouse. We're not claiming otherwise.</li>
+        <li class="no"><b>Synthetic data only</b> — 50 generated users on the reserved <code>example.invalid</code> domain; user 007 carries <code>plan='legacy'</code> so the failure is deterministic.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 10 ----------------------------------------------------------------- -->
+<section class="slide">
+  <p class="eyebrow">Where this is useful</p>
+  <h2>Four situations this already fits</h2>
+  <div class="grid g2">
+    <div class="card"><span class="tag">Highest leverage</span><h3>Agent-authored migrations</h3><p>An AI agent proposes a schema change. Warden is the guard rail: the agent's own recorded intent becomes the explanation when the migration fails — and the privacy boundary keeps that intent off the warehouse.</p></div>
+    <div class="card"><span class="tag">Data quality</span><h3>Rolling a rule onto legacy data</h3><p>Exactly the demo: a business rule meets rows that predate it. You want the offending rows named and the table intact, not a half-applied constraint.</p></div>
+    <div class="card"><span class="tag">Incident response</span><h3>3am schema rollback</h3><p>The engineer who picks up the page is not the one who wrote the migration. The recorded intent is the difference between a five-minute fix and an hour of archaeology.</p></div>
+    <div class="card"><span class="tag">Compliance</span><h3>Auditable change history</h3><p><code>migration_log</code> records every attempt, its outcome, and how complete the context was — deliberately without the sensitive text itself.</p></div>
+  </div>
+</section>
+
+<!-- 11 ----------------------------------------------------------------- -->
+<section class="slide">
+  <p class="eyebrow">Limits, stated plainly</p>
+  <h2>What we did not build</h2>
+  <ul class="clean">
+    <li class="no"><b>One table, one migration, one validation path.</b> A narrow vertical slice proven end-to-end, chosen over a broad one that doesn't run.</li>
+    <li class="no"><b>A multi-table scheduler exists — and is excluded.</b> We prototyped it today and left it out because it wasn't live-verified before the deadline. It's on the <code>handoff</code> branch, and the docs say exactly why it isn't shipped.</li>
+    <li class="no"><b><code>RESTORE</code> fails if VACUUM purged the target version.</b> Production needs a retention policy that guarantees the rollback window survives.</li>
+    <li class="no"><b>Validation is a full-table scan</b>, and the token is a long-lived PAT. Both need to change before this is a production tool.</li>
+  </ul>
+  <div class="kpi">
+    <div><div class="n safe">19</div><div class="k">tests passing</div></div>
+    <div><div class="n safe">153</div><div class="k">Delta version, pre = post</div></div>
+    <div><div class="n">2</div><div class="k">independent review passes</div></div>
+    <div><div class="n">1</div><div class="k">privacy test proven by mutation</div></div>
+  </div>
+</section>
+
+<!-- 12 ----------------------------------------------------------------- -->
+<section class="slide">
+  <p class="eyebrow">Next</p>
+  <h2>From one table to a migration control plane</h2>
+  <ul class="clean">
+    <li><b>Multi-table, dependency-aware parallelism</b> — independent tables migrating concurrently under a worker bound; same-table work strictly ordered; a failure isolated to its own table.</li>
+    <li><b>Live progress instead of a terminal pass/fail</b> — rows processed, replay lag, phase, warehouse spend. That's also what makes health alerts meaningful mid-flight.</li>
+    <li><b>An operator in the loop</b> — inspect what validation caught, correct the offending rows, approve or hold a cutover. The checkpoint boundary is what makes exposing that safe.</li>
+    <li><b>The migrations that actually frighten people</b> — changing a primary key, splitting one table into several, merging several into one. A blind revert is least acceptable exactly where it's most likely needed.</li>
+  </ul>
+  <p class="sub" style="margin-top:26px">Verify any of this yourself: <code>bash warden/demo.sh</code> for the live loop, or <code>bash warden/demo.sh --self-test</code> with no credentials at all.</p>
+</section>
+
+</div>
+
+<div class="bar">
+  <span class="name">Warden</span>
+  <div class="prog" id="prog" role="tablist" aria-label="Slides"></div>
+  <div class="nav">
+    <button id="prev" aria-label="Previous slide">←</button>
+    <button id="next" aria-label="Next slide">→</button>
+  </div>
+  <span class="count" id="count"></span>
+</div>
+
+<script>
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var prog = document.getElementById('prog');
+  var count = document.getElementById('count');
+  var i = 0;
+
+  slides.forEach(function (s, n) {
+    var b = document.createElement('button');
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-label', 'Slide ' + (n + 1));
+    b.addEventListener('click', function () { go(n); });
+    prog.appendChild(b);
+  });
+  var dots = Array.prototype.slice.call(prog.children);
+
+  function go(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (s, k) { s.classList.toggle('on', k === i); });
+    dots.forEach(function (d, k) { d.setAttribute('aria-current', k === i ? 'true' : 'false'); });
+    count.textContent = (i + 1) + ' / ' + slides.length;
+    window.scrollTo(0, 0);
+  }
+  document.getElementById('next').addEventListener('click', function () { go(i + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(i - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(i + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(i - 1); }
+    if (e.key === 'Home') { go(0); }
+    if (e.key === 'End') { go(slides.length - 1); }
+  });
+  go(0);
+</script>
