@@ -1,0 +1,94 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TSK3WMV1GGQ9KZR1GC0NZ6",
+  "session_id": "a67113eb-8bf5-4f12-a894-98e2726c95df",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T07:23:15.304010608Z",
+  "branch": "handoff",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "warden/migrate.py",
+    "warden/test_migrate.py"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "8a2898b083e5",
+  "checkpoint_transcript_start": 417,
+  "transcript_lines_at_start": 417,
+  "compact_transcript_start": 68,
+  "token_usage": {
+    "input_tokens": 66,
+    "cache_creation_tokens": 52930,
+    "cache_read_tokens": 7468780,
+    "output_tokens": 41644,
+    "api_call_count": 33
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01HoRN3TQ7kBEyn6cRwKpfxJ",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:brainstorming"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "8a2898b083e5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 451,
+        "end": 452,
+        "entry_ids": [
+          "b6cffff7-333b-41ae-a4b9-3bab7a060177"
+        ],
+        "tool_use_id": "toolu_01HoRN3TQ7kBEyn6cRwKpfxJ"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01HoRN3TQ7kBEyn6cRwKpfxJ"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:brainstorming",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 9
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-06T07:23:15.17410879Z",
+    "agent_lines": 129,
+    "agent_removed": 26,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 129,
+    "total_lines_changed": 155,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    }
+  ]
+}

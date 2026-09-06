@@ -1,0 +1,19 @@
+also do you think we are using databricks too the best ability we are, and are there any other ways that we can use it better, and 
+
+in its current state, can you take a step back and grade our work and be super and truly brutally honest, think abou it from the perspective of a field cto
+
+---
+
+also how are we making their privacy better or improving it and ensuring that it stays that, are we doign something new or introducing something on top of what they already have
+
+---
+
+ok we have 2:15 hrs left. so we have time to work on this and get this done. 
+
+i want to brianstorm things to address teh databricks things you mentioend and the prviacy as well, and get this up to an A+, its a hackathon so we have ot push hard and use whatever things at our disposal. 
+
+use skills subagents and pelase use your usage wisely. and what should i do with codex
+
+---
+
+ok go ahead and tell me how to get codex involved into this, and i want you to look into addressing the failure thing in a way that gives a good case and outcome as a whole

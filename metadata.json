@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TSK3WMV1GGQ9KZR1GC0NZ6",
+  "strategy": "manual-commit",
+  "branch": "handoff",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "warden/migrate.py",
+    "warden/test_migrate.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 66,
+    "cache_creation_tokens": 52930,
+    "cache_read_tokens": 7468780,
+    "output_tokens": 41644,
+    "api_call_count": 33
+  }
+}
