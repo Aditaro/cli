@@ -106,6 +106,28 @@ Do this as a normal commit with a message covering those four points (Entire's h
 
 Update `## Done` when finished — this is likely the last task before submission, so also flag anything you think still needs attention before 3pm.
 
+## Now
+**Assigned: Codex — score-improvement pass, we have time and budget left, use it**
+
+We do NOT have the organizers' exact rubric with weights — nobody in this session has seen a written scoring sheet. What we do know, from the pivot commit (`git show 666631970`) and BUILDATHON.md's own framing, is the category *names*: **Problem/Innovation**, **Technical Implementation**, **Demo**, **Use of Entire** (checkpoint-native workflow + Entire Graph impact analysis — this is Track 1's whole point), and the optional secondary **Use of Databricks** award. Don't invent weights or percentages we don't have — grade against the category names honestly and say where you're guessing.
+
+### Step 1 — brutally honest self-assessment (do this first, before touching code)
+
+Go category by category. For each: what's actually built, what a skeptical judge would say is thin or missing, and a 1-10 gut score with one sentence of justification. Do not soften this — if something is a demo trick rather than a real capability, say so. Cover at minimum:
+- **Problem/Innovation**: is the core trick (Delta time-travel + checkpoint-driven explanation) actually novel, or is it "one line of SQL any DBA already has, wrapped in automation"? Say which.
+- **Technical Implementation**: one table, one migration, one validation path, 16 unit tests, real live verification — is that solid-but-narrow, or thin?
+- **Demo**: `warden/demo.sh` is one-command and has been run live successfully — but has anyone actually rehearsed narrating it out loud against a clock, or just run it silently? A working script and a good live demo are not the same thing.
+- **Use of Entire**: are checkpoints load-bearing (the healing explanation genuinely depends on `entire checkpoint explain`) or decorative? Is `entire graph impact` used meaningfully, or just run once to check a box (see the existing "IMPACT DEGENERATE: no callers" finding in BUILDATHON.md — is that a strength — honest reporting — or a weakness — the graph found nothing useful)?
+- **Use of Databricks** (secondary award): be specific — Delta time-travel and the CHECK constraint are genuinely Databricks-native; the seed table, the connector calls, and the dashboard chart are generic and would work identically against Postgres. What fraction of the Databricks surface area is actually load-bearing vs. incidental?
+
+Write this as a short markdown block under `## Done` below — don't hold back to be polite, this is meant to find real gaps with ~2 hours and budget left to fix them.
+
+### Step 2 — turn the gaps into a ranked task list
+
+From your own Step 1 assessment, list concrete, buildable-in-under-30-minutes-each improvements, ranked by expected score impact per category. Do NOT implement yet — just list them with: which category it helps, rough time estimate, and one sentence on why it moves the needle (not just "more tests" — specifically what gap it closes). Claude Code will review the list and assign back whichever ones are worth the remaining time.
+
+Do NOT touch `warden/migrate.py` for this task — assessment and a list only.
+
 ## Ground rules for every agent (Claude Code, opencode, Codex)
 - Use Entire yourself while you work, not just as something the product touches: run `entire graph search` / `entire graph impact` before changing code you didn't write, and check `entire checkpoint list` if you're unsure what's already been decided.
 - Write commit messages that capture *why*, not just *what* — rejected options, assumptions, anything you'd want a fresh session to know. Your commits are checkpoints; treat them like it.
