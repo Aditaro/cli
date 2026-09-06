@@ -256,3 +256,48 @@ codex:
   Per the task’s stop-on-failure rule, I did not fix or rerun further tests. The safe submission
   recommendation is the last fully live-verified baseline commit: f8f9599e5, unless someone diagnoses and
   fully re-verifies the 45-row discrepancy.
+
+---
+
+<task-notification>
+<task-id>a0cc575f94703a5ca</task-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/a67113eb-8bf5-4f12-a894-98e2726c95df/tasks/a0cc575f94703a5ca.output</output-file>
+<status>completed</status>
+<summary>Agent "/code-review" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>I ran the diff (`git diff @{upstream}...HEAD` — 17 files: `warden/`, `migrations/`, `databricks/`, plus docs; the working-tree changes are only `.gemini/*.md` and a lockfile, no logic) and reviewed every hunk against the surrounding code.
+
+Note: there is no `ReportFindings` tool exposed in this session (`ToolSearch` for it returns nothing), so the findings are below in full.
+
+---
+
+**warden/demo.sh:7 — CRITICAL: the new `--self-test` can never fail.** The script sets `set -uo pipefail` with no `-e`, so `test -s`, `grep -Fq`, and `python3 databricks/seed.py --self-test` are all non-fatal; the block unconditionally falls through to `echo "self-test OK..."; exit 0`. Verified: I replaced `migrations/001_validate.sql` with `-- broken` and `bash warden/demo.sh --self-test` still printed "self-test OK" and exited 0. This is the no-credentials verification path BUILDATHON.md advertises, and it is a no-op. Fix: `set -e` (or `|| { echo ...; exit 1; }` per check). Note line 75's `set -e` also *enables* errexit for the first time, mid-script, which is probably not intended either.
+
+**warden/orchestrate.py:145 — HIGH: `except Exception` misses `SystemExit`, so a credential-less run loses every result.** `execute_migration` → `migrate.apply_migration` → `migrate.connect()`, which calls `sys.exit(1)` when a `DATABRICKS_*` var is missing (migrate.py:135). `SystemExit` derives from `BaseException`, so `future.result()` re-raises it straight past the handler, out of the `with ThreadPoolExecutor` (after blocking on shutdown for the other in-flight migrations), and out of `main`. Verified with a repro: `run_schedule` escapes with `SystemExit 1`, `results` is discarded, nothing is printed. The exact scenario the reviewer of a batch runner cares about — "I forgot to export the token" — yields a silent exit 1 with no per-migration report. Catch `BaseException` (or `Exception, SystemExit`) around `future.result()`.
+
+**warden/orchestrate.py:26 — HIGH: a manifest entry with no `validate_sql` runs unvalidated and is reported "succeeded".** `REQUIRED_FIELDS` omits it and `execute_migration` passes `entry.get("validate_sql")`; `apply_migration` then leaves `offending_rows = 0`, logs status `applied`, and returns 0. Warden's entire premise is validate-then-heal, so an entry that silently skips validation and reports success is the worst possible default for the orchestrator. Either require `validate_sql` or mark such an outcome `succeeded_unvalidated`.
+
+**migrations/002_add_migration_marker.sql:4 — MEDIUM: the new "success" fixture is not re-runnable, and the second run reports failure + rollback.** Run 1 adds `migration_marker` and populates it (validation returns 0 rows, success). Run 2's `ALTER TABLE warden.demo_users_clean ADD COLUMNS (migration_marker STRING)` raises column-already-exists, `apply_migration`'s blanket `except` catches it, and Warden `RESTORE`s `demo_users_clean` to the pre-run version — so the demo's advertised deterministic success path only succeeds once per seed, and the checked-in `manifest.example.json` inherits the same behavior. Use `ADD COLUMNS IF NOT EXISTS` (or re-seed before each run and say so in the README).
+
+**warden/orchestrate.py:156 — MEDIUM: parallelism makes `warden.migration_log` bookkeeping able to roll back a migration that actually succeeded.** `log_attempt` (migrate.py:180) calls `ensure_log_table`, which runs `ALTER TABLE warden.migration_log ADD COLUMNS (context_completeness STRING)` and re-raises anything not matching its duplicate-column string match. The success-path `log_attempt(..., "applied", ...)` (migrate.py:287) is *inside* `apply_migration`'s `try`, so with two migrations landing concurrently, a Delta concurrent-modification / metadata-conflict error on that ALTER propagates to the `except`, and Warden then issues `RESTORE TABLE ... TO VERSION AS OF pre_version` — undoing a migration that applied and validated cleanly, and recording it as `healed`. Move the success-path logging outside the `try` (or guard `ensure_log_table` behind a lock/one-shot at orchestrator startup).
+
+**warden/orchestrate.py:171 — LOW: `--max-workers 0` is silently ignored and the guard below it is dead code.** `workers = args.max_workers or manifest_workers` treats `0` as falsy, so `--max-workers 0` falls back to the manifest value; `if workers &lt; 1: parser.error(...)` can then never fire, because `load_manifest` already rejects a manifest value `&lt; 1` and any explicit negative is truthy and caught. Verified: `--max-workers 0` on `manifest.example.json` reports `"max_workers": 2` and exits 0. Use `args.max_workers if args.max_workers is not None else manifest_workers`.
+
+**databricks/seed.py:96 — LOW: the clean-table write can leave the demo half-seeded.** `setup.sql` uses `CREATE TABLE IF NOT EXISTS`, so any workspace provisioned before this PR has `demo_users` but not `demo_users_clean`. `seed.py` now replaces `demo_users` first (already committed — Databricks has no multi-statement transaction here), then hits `DELETE FROM warden.demo_users_clean` and dies with a traceback, never printing the summary. The operator ends up with a partially seeded demo and no indication which half ran. Either run the two tables' writes in the safe order (clean first) or check/create the table before deleting anything.
+
+**warden/test_health_report.py:47 — LOW: `test_health_snapshot_and_both_renderers_never_leak_raw_intent_or_error` asserts nothing.** `secret_intent` is defined but never fed into the system (`checkpoint_context` is patched to return a bare `object()`), and `secret_error` is returned as `latest_log_status`'s *second* element, which `health_snapshot` only attaches when `log_row is None` — and the test supplies a truthy `safe_log`. Both `assert ... not in output` lines pass vacuously, so the test named as the privacy guarantee would not catch a regression that leaked either value. Make `checkpoint_context` return `LocalOnlyText(secret_intent)` and add a second case with `log_row=None`.
+
+---
+
+Findings, one line each:
+
+- `warden/demo.sh:7` — no `set -e`, so `--self-test` always prints OK and exits 0 even with broken fixtures (verified).
+- `warden/orchestrate.py:145` — `except Exception` misses `SystemExit` from `migrate.connect()`; a missing credential discards all results and exits silently (verified repro).
+- `warden/orchestrate.py:26` — `validate_sql` is not a required manifest field, so an entry without it runs unvalidated and is reported `succeeded`.
+- `migrations/002_add_migration_marker.sql:4` — `ADD COLUMNS` is not idempotent; the second run fails and Warden rolls back the marker, so the "success" demo works only once.
+- `warden/orchestrate.py:156` — concurrent `ensure_log_table` `ALTER` inside `apply_migration`'s `try` can trigger a `RESTORE` that undoes a migration that applied and validated.
+- `warden/orchestrate.py:171` — `--max-workers 0` silently falls back to the manifest value; the `workers &lt; 1` guard is unreachable (verified).
+- `databricks/seed.py:96` — on a pre-existing workspace without `demo_users_clean`, the seed dies after already replacing `demo_users`, leaving the demo half-seeded.
+- `warden/test_health_report.py:47` — both "never leak" assertions are vacuous; neither secret value ever enters the snapshot.</result>
+<usage><subagent_tokens>151246</subagent_tokens><tool_uses>18</tool_uses><duration_ms>268831</duration_ms></usage>
+</task-notification>
