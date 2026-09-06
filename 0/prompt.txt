@@ -1,23 +1,3 @@
-It looks like you are running the **Gemini CLI** and it is failing to start because of a few formatting errors in your custom agent definition files, followed by an incomplete authentication step.
-
-Here is how to get the CLI running smoothly:
-
-1. **Remove the invalid 'color' property:** dev.md and reviewer.md.
-Open `/home/adit/Desktop/Coding/BTW_Buildathon/.gemini/agents/dev.md` and `reviewer.md` in your code editor. In the YAML frontmatter (the configuration block at the very top between the `---` lines), find and delete the `color:` line, as the current schema does not recognize it. Saving these files will clear the "Unrecognized key" errors on your next startup.
-
-
-2. **Fix the YAML indentation:** test-doc.md.
-Open `.gemini/agents/test-doc.md`. On line 2, there is an indentation or formatting error. If you have a long string like `Context: User needs sample...`, ensure it is properly aligned with the rest of the keys or wrap the entire value in double quotes. A properly formatted YAML block will clear the "bad indentation" parsing error.
-
-
-3. **Restart and authenticate:** Terminal.
-Run your Gemini CLI command again. When the authentication menu appears, use your **arrow keys** to select your preferred method (like "Sign in with Google" or "Use Gemini API Key"), and press **Enter**. You will know this step is successful when the CLI finishes loading and presents the standard chat prompt.
-
-
-*Note: If you choose "Sign in with Google" and your browser does not open automatically, manually copy the long `[https://accounts.google.com/o/oauth2/](https://accounts.google.com/o/oauth2/)...` URL printed in your terminal and paste it into your web browser to complete the login.*
-
----
-
 Tell Codex: it's idle and its last task (pre-noon freeze verification) predates today's code change, so have it re-verify live against the new code:
 
 ▎ Pull latest (cc16573cc+), then run set -a; source .env; set +a; bash warden/demo.sh and python3 -m pytest warden/ databricks/ -q for real against the live warehouse. Confirm: (a) the ALTER TABLE ... ADD COLUMNS backfill succeeds against the already-existing warden.migration_log table, (b) the most recent log row shows a context_completeness value, (c) the printed row's note does not contain raw checkpoint intent text. Report full real output in ## Done, don't fix anything yourself.
