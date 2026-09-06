@@ -1,0 +1,102 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TM4V29W8VBJVCNWZ0MGNVK",
+  "session_id": "aa3dd48f-da00-4a98-b800-6d821de6d1bb",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T05:48:03.51704911Z",
+  "branch": "handoff",
+  "checkpoints_count": 1,
+  "save_step_count": 2,
+  "files_touched": [
+    "TASKS.md"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "14fffd330de4",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 316,
+    "cache_creation_tokens": 282952,
+    "cache_read_tokens": 32123196,
+    "output_tokens": 158415,
+    "api_call_count": 158
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_0129BeiM8VZcZLSNPzWNT6Dr",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:brainstorming"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "38db6dd4f47f",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 49,
+        "end": 50,
+        "entry_ids": [
+          "55e9dc7c-1872-4eeb-ba4e-55e1bd0ff26a"
+        ],
+        "tool_use_id": "toolu_0129BeiM8VZcZLSNPzWNT6Dr"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_0129BeiM8VZcZLSNPzWNT6Dr"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:brainstorming",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 6
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-06T05:48:03.334539152Z",
+    "agent_lines": 7,
+    "agent_removed": 0,
+    "human_added": 6,
+    "human_modified": 2,
+    "human_removed": 0,
+    "total_committed": 14,
+    "total_lines_changed": 15,
+    "agent_percentage": 46.666666666666664,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 138,
+      "user_lines_removed": 1,
+      "agent_lines_added": 13,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "TASKS.md": 4,
+        "databricks/.gitignore": 2,
+        "databricks/dashboard_queries.sql": 15,
+        "databricks/seed.py": 88,
+        "databricks/setup.sql": 11,
+        "migrations/001_add_plan_column.sql": 5,
+        "migrations/001_validate.sql": 10,
+        "migrations/README.md": 3
+      },
+      "user_removed_per_file": {
+        "TASKS.md": 1
+      }
+    }
+  ]
+}
