@@ -32,6 +32,29 @@ Update `## Done` or `## Blocked` below when finished.
 - `warden.demo_users` is the one migration target for the demo. Keep scope to ONE table, ONE migration, ONE validation check — this is a narrow vertical slice, not a general migration framework.
 
 ## Done
+- **opencode:** Added `databricks/setup.sql`, `databricks/seed.py`, and
+  `databricks/dashboard_queries.sql`.
+  - `setup.sql`: `CREATE TABLE IF NOT EXISTS warden.demo_users (id BIGINT, email
+    STRING, plan STRING, created_at TIMESTAMP) USING DELTA` — the single demo
+    migration target.
+  - `seed.py`: inserts 50 clearly-synthetic rows (emails on reserved
+    `example.invalid` domain, marked synthetic in comments) via
+    `databricks-sql-connector` using env vars only (`DATABRICKS_SERVER_HOSTNAME`
+    / `DATABRICKS_HTTP_PATH` / `DATABRICKS_TOKEN`; fails exit 2 if any missing;
+    no hardcoded creds, no `.env`). Deletes existing rows first, then inserts —
+    idempotent. Exactly one offender per the Codex contract: user id 7 has
+    `plan='legacy'` (user007@example.invalid), so `001_validate.sql` fires.
+    `seed.py --self-test` verifies row count, offender presence, and synthetic
+    emails without a connection.
+  - `dashboard_queries.sql`: one query grouping migration attempts/applied vs
+    heals vs failures per day from `warden.migration_log`, which it assumes is
+    created/populated by the Warden core CLI with `(id, migration_name, status,
+    checkpoint_id, ts)`.
+  - Constraint on plans: `free`/`pro`/`enterprise` (matches
+    `migrations/001_validate.sql`).
+  - **Not run against the live warehouse** — needs real values for the 3 env
+    vars; run `python3 setup.sql`-equivalent / `python3 seed.py` once creds are
+    in place to validate end to end.
 - **Codex:** Added `migrations/001_add_plan_column.sql`, `001_validate.sql`, and
   `README.md`. The validation contract is that any `plan` value outside
   `free`, `pro`, or `enterprise` (including `NULL`) is an offender; the synthetic
