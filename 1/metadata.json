@@ -1,0 +1,407 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1V1H8R1DCWGFGF8QZDSAB34",
+  "session_id": "a67113eb-8bf5-4f12-a894-98e2726c95df",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T09:42:08.898961438Z",
+  "branch": "safe-submission",
+  "checkpoints_count": 11,
+  "save_step_count": 16,
+  "files_touched": [],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "2817fe990697",
+  "checkpoint_transcript_start": 1623,
+  "transcript_lines_at_start": 1623,
+  "compact_transcript_start": 297,
+  "token_usage": {
+    "input_tokens": 42,
+    "cache_creation_tokens": 39498,
+    "cache_read_tokens": 9299045,
+    "output_tokens": 29998,
+    "api_call_count": 21,
+    "subagent_tokens": {
+      "input_tokens": 0,
+      "cache_creation_tokens": 0,
+      "cache_read_tokens": 0,
+      "output_tokens": 0,
+      "api_call_count": 0
+    }
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01HoRN3TQ7kBEyn6cRwKpfxJ",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:brainstorming"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "803eec8090fc",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 451,
+        "end": 452,
+        "entry_ids": [
+          "b6cffff7-333b-41ae-a4b9-3bab7a060177"
+        ],
+        "tool_use_id": "toolu_01HoRN3TQ7kBEyn6cRwKpfxJ"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01HoRN3TQ7kBEyn6cRwKpfxJ"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:brainstorming",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-claude-code-code-review-2026-09-06T08:57:09.512836774Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "code-review"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "7df55a038b9f",
+      "timestamp": "2026-09-06T08:57:09.512836774Z",
+      "native": {
+        "command": "/code-review"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/code-review",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-claude-code-code-review-2026-09-06T09:15:46.292713692Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "code-review"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "0e094bad137b",
+      "timestamp": "2026-09-06T09:15:46.292713692Z",
+      "native": {
+        "command": "/code-review"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/code-review",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01PtE3Zw4XHmDtx5xt8XgBCJ",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "artifact-design"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "2817fe990697",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 1753,
+        "end": 1754,
+        "entry_ids": [
+          "fa6bf967-c800-441c-ba47-07659733b352"
+        ],
+        "tool_use_id": "toolu_01PtE3Zw4XHmDtx5xt8XgBCJ"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01PtE3Zw4XHmDtx5xt8XgBCJ"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: artifact-design",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 23
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 9,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 10,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 11,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 12,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 13,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 14,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 15,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 16,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 17,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
