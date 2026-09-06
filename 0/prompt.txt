@@ -1,5 +1,1 @@
-check tasks.md
-
----
-
 Handed off (008cbd9eb). Tell Codex to check TASKS.md for a new ## Now assignment — it's the final checkpoint closing out the curveball, and I framed it around Codex's own live-verification evidence since that agent has the most direct proof to cite (the real error name, the clean log row, the passing test suite). I'll stay idle until it reports back.
