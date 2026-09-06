@@ -1,0 +1,3 @@
+For OpenCode/Gemini — nothing databricks-specific is queued, but here's a genuinely useful lane if you want to use that seat:
+
+- Have it independently review the 5 remaining code-review findings I deliberately deferred (redundant completeness threading, the LocalOnlyText class being arguably over-built, an inconsistency in when intent is shown pre- vs post-failure, a duplicated string-building pattern, the per-call schema check). None of these block submission — they're quality/simplification notes. If you have a spare agent-seat and want a second opinion on whether any are worth 5-minute fixes before 3pm, that's a fine use of it. Otherwise, skip.
