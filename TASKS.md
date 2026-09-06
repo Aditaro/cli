@@ -265,6 +265,25 @@ Update `## Done` when finished — this is likely the last task before submissio
   - Added regression tests for all three cases.
   - Full verification: `python3 -m pytest warden/ databricks/ -q` →
     `16 passed, 3 skipped in 0.12s`.
+- **Codex (final Noon Curveball closing checkpoint):** The completed work is
+  committed in `4774afcbe` with Entire checkpoint
+  `01M1TTMA4CDD4ZTSWTG787CFV7`. The security assumption changed from treating
+  raw checkpoint intent as safe to send to external Databricks logs to treating
+  intent as local-only by default. The implementation now carries explicit
+  `context_completeness`, wraps intent in `LocalOnlyText`, reduces external DB
+  error notes through `error_summary()`, and includes the requested fixes for
+  silent schema-backfill failures, unknown `pre_version` rollback handling, and
+  redaction-marker classification.
+  - Live evidence: Delta raised
+    `DELTA_NEW_CHECK_CONSTRAINT_VIOLATION`; the logged note reduced that to
+    `ServerOperationError`, had `context_completeness=complete`, and contained
+    neither raw checkpoint intent nor row values.
+  - Existing non-redacted behavior remains green: `demo.sh` exited 0 and the
+    full suite reported `16 passed, 3 skipped in 0.12s`.
+  - No further implementation work is pending for the curveball. Before
+    submission, only the final dashboard-link check and one last full live
+    regression run remain worth considering; the unrelated pre-existing
+    `.gemini/` and `.opencode/package-lock.json` changes remain uncommitted.
 - **Noon Curveball — Track 1 Privacy Boundary (committed `cc16573cc`):**
   `get_latest_checkpoint()` now returns `(cp_id, intent, completeness)`, where
   `completeness` is `"complete" | "redacted" | "unavailable"` (redacted is
