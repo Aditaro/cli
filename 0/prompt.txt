@@ -1,3 +1,7 @@
 also in terms of develpment i would like to parallelize this and try to optimize for speed and be agnostic of various different features, wtherh that be rewriting things and it should also be able to adapt to various usecases as a whole. 
 
 and i want you to work on and address whatever things that have low scores so that we hvae a full score in our boosk and can say that we tried our level best and update tasks.md
+
+---
+
+review all the changes and everything you have done and look into any blockers that might get up bogged down, also can you rescore and check everything that we have done so far, i want to see really how much we improved
