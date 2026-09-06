@@ -1,0 +1,55 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TQET2BFGW2VQS36ZKS171T",
+  "session_id": "a67113eb-8bf5-4f12-a894-98e2726c95df",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T06:45:58.744220442Z",
+  "branch": "handoff",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "BUILDATHON.md",
+    "databricks/dashboard_queries.sql",
+    "databricks/test_integration.py",
+    "warden/demo.sh",
+    "warden/migrate.py",
+    "warden/test_migrate.py"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "bb3561ea5480",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 52,
+    "cache_creation_tokens": 120897,
+    "cache_read_tokens": 3464323,
+    "output_tokens": 22761,
+    "api_call_count": 26
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-06T06:45:58.649551393Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 125,
+    "human_modified": 34,
+    "human_removed": 0,
+    "total_committed": 125,
+    "total_lines_changed": 159,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 95,
+      "user_lines_removed": 72,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".opencode/package-lock.json": 72
+      }
+    }
+  ]
+}
