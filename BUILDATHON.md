@@ -32,6 +32,18 @@ IMPACT DEGENERATE: warden.demo_users has no callers, callees or type consumers
 ```
 This is the correct, honest answer: `demo_users` is a newly-introduced symbol, so it genuinely has no code dependents yet. Warden shows this evidence to the operator rather than silently skipping the check — `graph_impact()` degrades to an explicit "(graph impact unavailable: ...)" string on timeout/error instead of hiding the failure, per the guide's own warning that graph output is evidence, not fact.
 
+**Impact analysis on the two functions the Curveball actually changed.** The Curveball instructions asked for this *before* editing, and both were run before the privacy fix landed; `log_attempt`'s query initially exceeded the 30s window on a cold index and was recorded as unavailable rather than guessed at. Re-run on a warm index, it completes (`entire graph impact --repo . --symbol log_attempt --head --profile fast`, 62s total, 106ms query):
+```
+Impact: log_attempt (warden/migrate.py:180) def=180 span=180-194 [function]
+Blast radius: 2 callers (1 direct, 1 transitive), 1 callee, 0 type consumers.
+Callers (who breaks if behavior changes):
+- apply_migration (warden/migrate.py:246)
+- main (warden/migrate.py:337) [via apply_migration]
+Callees (what it depends on):
+- ensure_log_table (warden/migrate.py:149)
+```
+**Verified against source and tests, not quoted blind:** the two callers are exactly the applied/healed/failed call sites in `apply_migration`, each covered by `warden/test_migrate.py`; the single callee `ensure_log_table` is the function whose swallow-everything `except` an automated review pass caught and which is now pinned by `test_ensure_log_table_propagates_non_duplicate_alter_errors`. The Graph's claimed blast radius and the test suite's coverage agree — which is the point of checking, since `log_attempt` is the function that writes to the external service the Curveball was about.
+
 **Final semantic diff** (`entire graph diff --base b8c9fe619 --head HEAD`, i.e. pre-Curveball stable state → final). Real output, abridged to `warden/migrate.py` — the file the Curveball actually changed:
 ```
 warden/migrate.py (Python)
@@ -93,6 +105,18 @@ external log note.
 - **Safe resume report** (`f8f9599e5`) — read-only checkpoint readiness CLI that reuses the existing privacy boundary rather than inventing a second one.
 
 **The four required milestones map to:** initial understanding (`28dcc3fee`) → pivot and core implementation (`666631970`, `68001846c`) → pre-Curveball stable state (`b8c9fe619`) → Curveball response and verification (`cc16573cc`, `1784305b7`, `4774afcbe`).
+
+### The fresh-session criterion was met by the actual working history, not a staged test
+
+The rubric asks whether a fresh session can resume from these checkpoints. That was not simulated here — it is how the Curveball response was actually produced, and the history shows it:
+
+1. `0d29a022c` ("Curveball received … Stopping implementation here") deliberately ended the pre-Curveball session at a stable point.
+2. A **new agent session** was started with no conversational memory of the prior work. Its first action was `entire checkpoint explain 0d29a022c`, and it was instructed to rely on nothing else.
+3. From that checkpoint alone it reconstructed the architecture, located the offending assumption (`get_latest_checkpoint()` sending raw intent into `warden.migration_log`), ran `entire graph impact` on `get_latest_checkpoint` and `log_attempt` *before* editing, and implemented the full privacy boundary — `context_completeness`, `LocalOnlyText`, `error_summary` — with tests.
+
+So the resumed work was not a summary or a status read: a cold session reconstructed intent from a checkpoint and then made the single most significant change in the project. Every commit from `cc16573cc` onward is that session's output. A second, narrower check was also run in a scrubbed environment (`env -i`), where `entire checkpoint explain 01M1TWD4BP5ZTG9SJWHM7BJNZP` alone was enough to recover the batch's scope, touched files, and next action.
+
+`python3 warden/resume_report.py <checkpoint_id>` is the productized form of that same capability, with the privacy boundary applied: it tells a fresh operator or agent whether context is complete enough to proceed, without ever exposing the checkpoint text itself.
 
 ## Setup, run and test instructions
 ```
