@@ -1,0 +1,145 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1V1H8R1DCWGFGF8QZDSAB34",
+  "session_id": "01a0757c-b060-7432-b490-f0374c27d783",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T09:42:06.789488829Z",
+  "branch": "safe-submission",
+  "checkpoints_count": 1,
+  "save_step_count": 7,
+  "files_touched": [],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "0315af22fa0b",
+  "checkpoint_transcript_start": 2038,
+  "transcript_lines_at_start": 2038,
+  "compact_transcript_start": 272,
+  "token_usage": {
+    "input_tokens": 12744,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 668416,
+    "output_tokens": 8381,
+    "api_call_count": 5
+  },
+  "session_metrics": {
+    "turn_count": 9
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
