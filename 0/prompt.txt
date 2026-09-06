@@ -103,3 +103,7 @@ URGENT — under 7 minutes. Ship the preflight branch, do not improve it.
 ▎ Report the full SHA on one line as your first output — Adit needs it for the submission form immediately.
 ▎
 ▎ Do NOT touch safe-submission. If anything fails or is red, say so in one line and stop — we submit fa6d0d79f unchanged.
+
+---
+
+can you set everything here so that i can set this up on vercel on an app so that i can send it as a visual link claude code is working on a slide deck parallely
