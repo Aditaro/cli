@@ -1,0 +1,94 @@
+also before you go ahead and do everything your usage is about to run out, so give a list of tasks for codex to do and i will carefully do it so that i can mange its useage
+
+---
+
+<task-notification>
+<task-id>aa02db3e9bb796fa7</task-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/a67113eb-8bf5-4f12-a894-98e2726c95df/tasks/aa02db3e9bb796fa7.output</output-file>
+<status>completed</status>
+<summary>Agent "/code-review" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>All candidates verified. Here are the final findings, ranked most severe first.
+
+```json
+[
+  {
+    "file": "warden/migrate.py",
+    "line": 161,
+    "summary": "ensure_log_table's ALTER TABLE ADD COLUMNS backfill is wrapped in a bare `except Exception: pass` meant only to swallow 'column already exists', but it swallows every failure (permissions, connectivity, schema-evolution restrictions).",
+    "failure_scenario": "Against a pre-existing live warden.migration_log table (created before this column existed), if the ALTER TABLE fails for a real reason, the failure is silently discarded. The very next log_attempt INSERT (line 175-181) explicitly lists context_completeness and fails because the column doesn't exist. Since log_attempt is called on the success path inside apply_migration's main try block (line 268), that INSERT exception is caught by the same outer `except Exception as e:` (line 274) that drives the heal/rollback logic — so a migration that fully succeeded and passed validation gets misclassified as failed and Warden performs an unwarranted Delta time-travel RESTORE on a table that never had a problem."
+  },
+  {
+    "file": "warden/migrate.py",
+    "line": 252,
+    "summary": "pre_version is assigned only inside the try block; if current_delta_version() itself raises, the except block references pre_version before it was ever set, raising UnboundLocalError.",
+    "failure_scenario": "If DESCRIBE HISTORY fails (nonexistent table, transient warehouse error), the except handler's print at line 276 (and the describe_failure call at line 294) crash with UnboundLocalError instead of running the intended healing/logging — masking the real cause with a confusing secondary error and leaving no row written to migration_log at all."
+  },
+  {
+    "file": "warden/migrate.py",
+    "line": 76,
+    "summary": "classify_completeness detects a redacted checkpoint via an unanchored substring check `\"REDACTED\" in intent`, with no anchor to Entire's actual `[REDACTED_&lt;LABEL&gt;]` placeholder shape.",
+    "failure_scenario": "A checkpoint whose intent is genuinely complete but happens to literally contain the word REDACTED (very plausible in this exact repo, which is actively building a redaction/privacy-boundary feature) is misclassified as completeness=='redacted', causing describe_failure to needlessly hide fully-available, non-sensitive intent from the operator at the moment it's most needed for diagnosis."
+  },
+  {
+    "file": "warden/migrate.py",
+    "line": 208,
+    "summary": "describe_failure's console_text only reveals intent when completeness == 'complete' (substituting a placeholder otherwise), but apply_migration's own initial print of the same intent (line 241) reveals it unconditionally with no completeness gating at all — a new inconsistency this diff introduces (the pre-diff code had no gating on either print site).",
+    "failure_scenario": "A migration fails with a 'redacted' checkpoint whose intent (e.g. \"Rotate the [REDACTED_EMAIL] account's plan\") was already shown in full moments earlier at migration start; the failure explanation then hides that same, already-safe text behind a generic 'verify locally' message, losing diagnostic content precisely when the operator needs it to write a corrected migration."
+  },
+  {
+    "file": "warden/migrate.py",
+    "line": 162,
+    "summary": "The ALTER TABLE ADD COLUMNS backfill runs unconditionally on every call to ensure_log_table, which log_attempt calls unconditionally on every terminal branch of apply_migration (lines 268, 287-292, 296) — i.e. on every single script invocation forever, with no caching or one-time check.",
+    "failure_scenario": "Every migration run pays an extra DB round-trip (and, on the very first successful run, a real Delta-log commit) to re-attempt a schema change that only ever needs to succeed once per warehouse — unnecessary write-path cost added to the hot path in perpetuity."
+  },
+  {
+    "file": "warden/migrate.py",
+    "line": 184,
+    "summary": "error_summary() is the only thing preventing raw exception text (which can embed table row values, per its own docstring) from reaching the external db_note, but unlike LocalOnlyText's type-level guarantee for intent, this is enforced purely by convention — every call site must remember to call error_summary(e) instead of interpolating the exception directly.",
+    "failure_scenario": "A future edit to the heal-failed branch or a new log_attempt call site could write `f\"...{error}...\"` directly into a note bound for Databricks, leaking sensitive row values through the exact door this diff otherwise closes for intent — with no structural guard (unlike LocalOnlyText) to catch the mistake."
+  },
+  {
+    "file": "warden/migrate.py",
+    "line": 287,
+    "summary": "The heal-failed branch hand-builds its own 'migration failed (...) AND rollback failed (...); see operator console for detail' string using error_summary(), instead of reusing describe_failure's near-identical db_note-building pattern (lines 220-224).",
+    "failure_scenario": "Two separate code paths build the same kind of safe external-status string; a future change to the db_note format/wording only updates describe_failure and silently misses this inline site, letting the two log-row shapes drift out of sync."
+  },
+  {
+    "file": "warden/migrate.py",
+    "line": 66,
+    "summary": "classify_completeness(cp_id, intent) is called at 4 separate return points inside get_latest_checkpoint (lines 90, 95, 102, 107, 111) and the result is then threaded as an extra parameter through log_attempt (3 call sites) and describe_failure, even though completeness is fully derivable once from cp_id+intent at the one call site in apply_migration that already has both.",
+    "failure_scenario": "Every function that logs or describes a checkpoint carries an extra parameter that's pure derived state; if the classification rule ever changes, there are 4 call sites inside get_latest_checkpoint (plus every downstream signature) to keep in sync instead of one."
+  },
+  {
+    "file": "warden/migrate.py",
+    "line": 35,
+    "summary": "LocalOnlyText is a ~30-line class (with __init__, .reveal(), __bool__, __str__, __repr__ and a 12-line docstring) built to guarantee checkpoint intent can't leak into db_note, but describe_failure's db_note never references intent at all — the guarantee is already achieved by the function's parameter list, not by the wrapper.",
+    "failure_scenario": "Extra class and dunder-method surface area (does __str__ return real text or a placeholder? what does bool() mean here?) for a guarantee obtainable by simply not passing intent to whatever builds the DB-bound string, e.g. giving db_note-building code no intent parameter at all."
+  }
+]
+```
+
+Summary of process: gathered the diff (`git diff @{upstream}...HEAD`, 543 lines across 7 files, plus 384 lines of uncommitted working-tree changes in unrelated `.gemini`/`.opencode` config files that yielded no findings), ran 8 parallel finder angles against `/home/adit/Desktop/Coding/BTW_Buildathon/warden/migrate.py` and `warden/test_migrate.py` (the substantive change — a Databricks migration guard that reads checkpoint intent from Entire and adds a privacy boundary so raw intent/error text never reaches the external log), then verified all 9 surviving candidates (6 via dedicated verifier agents, 3 self-verified against the code I'd already read in full) — all came back CONFIRMED. The `CLAUDE.md` conventions angle found nothing applicable (that file documents a different Go CLI project's Go-specific conventions, not this Python code). No findings were dropped for being unverifiable.</result>
+<usage><subagent_tokens>187495</subagent_tokens><tool_uses>61</tool_uses><duration_ms>445852</duration_ms></usage>
+</task-notification>
+
+---
+
+yes do the cheap action, ill give these bug fixing to codex for now
+
+---
+
+<task-notification>
+<task-id>aa02db3e9bb796fa7</task-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/a67113eb-8bf5-4f12-a894-98e2726c95df/tasks/aa02db3e9bb796fa7.output</output-file>
+<status>completed</status>
+<summary>Agent "/code-review" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Review already delivered above — that background wait-loop notification was just the leftover pacing task from Phase 2, not new work. Nothing further to do.</result>
+<usage><subagent_tokens>188676</subagent_tokens><tool_uses>61</tool_uses><duration_ms>532689</duration_ms></usage>
+</task-notification>
+
+---
+
+what are the next development tasks that i should look into with codex and opencode and such
