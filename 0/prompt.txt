@@ -1,0 +1,5 @@
+but moving forward, lets have sub folderst aht they edit and ones that you monitor so that there are no conflicts as a whole is that a good idea
+
+---
+
+codex is done btw, and opencode is not working propelry will try to fix that and if it doesnt work will try using gemeni cli
