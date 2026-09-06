@@ -26,6 +26,11 @@ Do NOT touch anything outside `migrations/`. Coordinate with opencode's seed dat
 
 Update `## Done` or `## Blocked` below when finished.
 
+## Ground rules for every agent (Claude Code, opencode, Codex)
+- Use Entire yourself while you work, not just as something the product touches: run `entire graph search` / `entire graph impact` before changing code you didn't write, and check `entire checkpoint list` if you're unsure what's already been decided.
+- Write commit messages that capture *why*, not just *what* — rejected options, assumptions, anything you'd want a fresh session to know. Your commits are checkpoints; treat them like it.
+- If you build something and it works differently than planned, say so in `## Done` — don't silently paper over a deviation.
+
 ## Context
 - **Pivoted** from the original "Handoff" idea (checkpoint-mined onboarding briefing) to **Warden**: a self-healing DB migration guard. Reason: Warden has a higher ceiling on Problem/Innovation and Demo, cleaner Entire Graph fit (impact analysis before a schema change), at the cost of higher technical-implementation risk. See BUILDATHON.md for full rationale.
 - Warden's core loop: checkpoint intent → graph impact check → apply migration → validate → on failure, Delta time-travel rollback + explain using the checkpoint's recorded intent → checkpoint the outcome.
