@@ -32,6 +32,8 @@ IMPACT DEGENERATE: warden.demo_users has no callers, callees or type consumers
 ```
 This is the correct, honest answer: `demo_users` is a newly-introduced symbol, so it genuinely has no code dependents yet. Warden shows this evidence to the operator rather than silently skipping the check — `graph_impact()` degrades to an explicit "(graph impact unavailable: ...)" string on timeout/error instead of hiding the failure, per the guide's own warning that graph output is evidence, not fact. Final semantic diff to be captured at submission time from the last commit's `entire graph diff` / `entire graph commit`.
 
+**Curveball-targeted Graph follow-up:** `entire graph impact --repo . --symbol get_latest_checkpoint --head --profile fast` was rerun against the hardened tree and found two callers (`apply_migration` directly and `main` transitively) plus the expected dependencies (`run_entire`, `LocalOnlyText`, and `classify_completeness`). Source and unit tests verify those edges: `apply_migration` consumes the returned completeness-wrapped intent, while the checkpoint tests cover committed-checkpoint selection, unavailable Entire output, malformed JSON, and redacted intent. The corresponding `log_attempt` impact query exceeded the local 30-second Graph window in this session; source inspection and the migration tests verify its callers (`apply_migration` through applied/healed/failed paths) and its external-boundary behavior, but that unavailable Graph result is not presented as a successful finding.
+
 ## Noon Curveball: what changed and how we adapted
 The curveball invalidated the assumption that sending the full checkpoint
 explanation in `warden.migration_log.note` was useful. A checkpoint can contain
@@ -97,7 +99,7 @@ python3 -m pytest warden/ databricks/ -q
 ```
 
 ## Databricks use, data sources and limitations
-Free Edition, one 2X-Small SQL warehouse, one Delta table for the demo migration target, synthetic/clearly-labeled seed data only. Delta time-travel (`RESTORE TABLE ... TO VERSION AS OF`) is the rollback mechanism, and Delta's own `CHECK` constraint enforcement is what actually catches the demo's seeded bad row — both are load-bearing, not decorative. Migration attempts/heals are visualized in a real Lakeview dashboard object in the workspace (created via `databricks/create_dashboard.py` against the Lakeview REST API, not just a stub query file): [Warden Migration Health](https://dbc-89334694-0d5f.cloud.databricks.com/dashboardsv3/01f1a9c471e5137fba57a227f9b91452).
+Free Edition, one 2X-Small SQL warehouse, one Delta table for the demo migration target, synthetic/clearly-labeled seed data only. The seed generator creates exactly 50 deterministic-looking synthetic users on the reserved `example.invalid` domain; user 7 deliberately has `plan='legacy'` so the business-rule failure is reproducible, and no production or personal data is used. Delta time-travel (`RESTORE TABLE ... TO VERSION AS OF`) is the rollback mechanism, and Delta's own `CHECK` constraint enforcement is what actually catches the demo's seeded bad row — both are load-bearing, not decorative. Migration attempts/heals are visualized in a real Lakeview dashboard object in the workspace (created via `databricks/create_dashboard.py` against the Lakeview REST API, not just a stub query file): [Warden Migration Health](https://dbc-89334694-0d5f.cloud.databricks.com/dashboardsv3/01f1a9c471e5137fba57a227f9b91452).
 
 ## Known limitations and next steps
 

@@ -180,6 +180,19 @@ Update `## Done` when finished.
 - `warden.demo_users` is the one migration target for the demo. Keep scope to ONE table, ONE migration, ONE validation check — this is a narrow vertical slice, not a general migration framework.
 
 ## Done
+- **Codex (rubric-gap evidence pass):** Strengthened `BUILDATHON.md` with an
+  explicit synthetic-data provenance statement (50 reserved-domain users,
+  deterministic seed, deliberate `plan='legacy'` offender, no production data)
+  and documented the curveball-targeted Graph follow-up. The fresh Graph impact
+  run for `get_latest_checkpoint` found two callers (`apply_migration` direct,
+  `main` transitive) and dependencies `run_entire`, `LocalOnlyText`, and
+  `classify_completeness`; source and checkpoint tests verify those edges. The
+  `log_attempt` Graph query exceeded the local 30-second window, so it is
+  explicitly recorded as unavailable rather than claimed as a finding; source
+  inspection and tests verify its applied/healed/failed callers and safe log
+  boundary. No code was changed, no fresh-session checkpoint experiment was
+  performed, and the remaining ranked gaps are still visible below.
+
 - **Codex (rubric self-assessment; no implementation changes):**
 
   ### Entire main challenge — 100 points
