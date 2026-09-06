@@ -62,7 +62,10 @@ def get_latest_checkpoint():
 def graph_impact(symbol):
     """Best-effort Entire Graph impact analysis. Evidence, not fact -- shown
     to the operator, never asserted as ground truth."""
-    out, err = run_entire(["graph", "impact", "--repo", ".", "--symbol", symbol], timeout=30)
+    out, err = run_entire(
+        ["graph", "impact", "--repo", ".", "--symbol", symbol, "--head", "--profile", "fast"],
+        timeout=45,
+    )
     if out is None:
         return f"(graph impact unavailable: {err})"
     return out.strip()
@@ -103,13 +106,19 @@ def ensure_log_table(cur):
 
 
 def log_attempt(cur, migration_name, status, checkpoint_id, note):
+    import uuid as uuid_module
+
     ensure_log_table(cur)
+    # uuid() can't be evaluated server-side inside a parameterized VALUES
+    # clause on Databricks (INVALID_INLINE_TABLE.CANNOT_EVALUATE_EXPRESSION_IN_INLINE_TABLE)
+    # -- generate the id client-side instead.
+    row_id = str(uuid_module.uuid4())
     cur.execute(
         """
         INSERT INTO warden.migration_log (id, migration_name, status, checkpoint_id, note, ts)
-        VALUES (uuid(), ?, ?, ?, ?, current_timestamp())
+        VALUES (?, ?, ?, ?, ?, current_timestamp())
         """,
-        (migration_name, status, checkpoint_id or "", (note or "")[:4000]),
+        (row_id, migration_name, status, checkpoint_id or "", (note or "")[:4000]),
     )
 
 
