@@ -38,10 +38,17 @@ if [[ "${1:-}" == "--self-test" ]]; then
   exit 0
 fi
 
-if [[ "$#" -ne 0 ]]; then
-  echo "usage: bash warden/demo.sh [--self-test]" >&2
+if [[ "$#" -gt 1 ]]; then
+  echo "usage: bash warden/demo.sh [--self-test | <checkpoint-id>]" >&2
   exit 2
 fi
+
+# Which checkpoint's recorded intent explains this migration. Pinned, because
+# the newest checkpoint on the branch is whatever was committed last, which is
+# not necessarily the work that authored the migration -- and intent from
+# unrelated work is worse than none, since it is confidently wrong. Override
+# by argument or environment; set empty to fall back to "most recent".
+DEMO_CHECKPOINT="${1:-${WARDEN_DEMO_CHECKPOINT-01M1V6D7VCDZC97DMBF1WGTR52}}"
 
 : "${DATABRICKS_SERVER_HOSTNAME:?DATABRICKS_SERVER_HOSTNAME must be exported}"
 : "${DATABRICKS_HTTP_PATH:?DATABRICKS_HTTP_PATH must be exported}"
@@ -100,9 +107,12 @@ pre_version="$(fetch_version)"
 printf '   %s%sDelta version %s%s\n' "$BOLD" "$CYN" "$pre_version" "$RST"
 
 step "2 · MIGRATE" "Apply, validate, and heal on failure via Delta time-travel."
+migrate_args=(migrations/001_add_plan_column.sql --validate-sql migrations/001_validate.sql)
+if [[ -n "$DEMO_CHECKPOINT" ]]; then
+  migrate_args+=(--checkpoint "$DEMO_CHECKPOINT")
+fi
 set +e
-python3 warden/migrate.py migrations/001_add_plan_column.sql \
-  --validate-sql migrations/001_validate.sql
+python3 warden/migrate.py "${migrate_args[@]}"
 migration_status=$?
 set -e
 if [[ "$migration_status" -gt 1 ]]; then
