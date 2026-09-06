@@ -1607,3 +1607,19 @@ Based on your tech stack
     SLSA Go releaserCompile your Go project using a SLSA3 compliant builderBy Open Source Security Foundation (OpenSSF)
 
 More workflows
+
+---
+
+https://claude.ai/code/artifact/ac6776b9-1101-4429-8fb1-de877a7e260f
+
+make this a pdf no. 
+
+and i dont have the option to choose branches for this
+
+---
+
+ok so when teh judges come what hsould i show them as a demo, and eveyrthing, they would want to see something live in action, and something that explains that as a whole
+
+---
+
+can you make teh demo cli more visual, and can you also show me and tell me what the main selling point for entire and databricks is here
