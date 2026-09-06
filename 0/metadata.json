@@ -1,0 +1,104 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TZPVE2XN3Q009KE6TPGQ58",
+  "session_id": "01a0757c-b060-7432-b490-f0374c27d783",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T09:10:14.596315099Z",
+  "branch": "safe-submission",
+  "checkpoints_count": 3,
+  "save_step_count": 4,
+  "files_touched": [],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "c50f1464d32a",
+  "checkpoint_transcript_start": 1622,
+  "transcript_lines_at_start": 1622,
+  "compact_transcript_start": 219,
+  "token_usage": {
+    "input_tokens": 30577,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1144064,
+    "output_tokens": 7876,
+    "api_call_count": 12
+  },
+  "session_metrics": {
+    "turn_count": 6
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    }
+  ]
+}
