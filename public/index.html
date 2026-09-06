@@ -13,6 +13,8 @@
         <a class="brand" href="#top"><span class="brand-mark">W</span> Warden</a>
         <div class="nav-links">
           <a href="#flow">How it works</a>
+          <a href="#compare">Why it matters</a>
+          <a href="#use-cases">Use cases</a>
           <a href="#privacy">Privacy</a>
           <a href="#proof">Evidence</a>
           <a class="nav-cta" href="#run">Run it</a>
@@ -73,8 +75,78 @@
         </article>
       </section>
 
+      <section class="section roles-section">
+        <div class="section-label">02 / TWO SYSTEMS, ONE SAFETY LOOP</div>
+        <div class="section-heading wide">
+          <h2>Entire remembers <em>why.</em><br />Databricks makes recovery real.</h2>
+          <p>Neither is decorative: one makes the handoff intelligible; the other makes rollback reliable.</p>
+        </div>
+        <div class="roles-grid">
+          <article class="role-card entire-role">
+            <div class="role-kicker">ENTIRE</div>
+            <h3>Decision context before the risk.</h3>
+            <ul>
+              <li>Checkpoint preserves the migration’s intent for the next engineer.</li>
+              <li>Graph impact makes the expected blast radius visible before apply.</li>
+              <li>Local privacy boundary keeps raw intent out of the warehouse.</li>
+            </ul>
+          </article>
+          <div class="role-plus">+</div>
+          <article class="role-card db-role">
+            <div class="role-kicker">DATABRICKS</div>
+            <h3>Failure detection and recovery in the data plane.</h3>
+            <ul>
+              <li>Delta <code>CHECK</code> enforcement catches invalid existing data.</li>
+              <li>Time travel restores the exact pre-migration table version.</li>
+              <li>Lakeview turns safe migration outcomes into an inspectable trail.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="compare" class="section compare-section">
+        <div class="section-label">03 / WHY WARDEN EXISTS</div>
+        <div class="section-heading wide">
+          <h2>From a blind revert<br />to a <em>safe, explainable recovery.</em></h2>
+        </div>
+        <div class="compare-grid">
+          <article class="compare-card before">
+            <span class="compare-label">BEFORE</span>
+            <h3>Migration fails. Someone starts archaeology.</h3>
+            <ul>
+              <li>Rollback is manual and error-prone under incident pressure.</li>
+              <li>The next on-call engineer has a diff, not the original reasoning.</li>
+              <li>Logs either lack context or risk carrying too much of it.</li>
+            </ul>
+          </article>
+          <div class="compare-arrow" aria-hidden="true">→</div>
+          <article class="compare-card after">
+            <span class="compare-label">WITH WARDEN</span>
+            <h3>Validate, restore, and hand off the useful part.</h3>
+            <ul>
+              <li>Delta detects the invalid state and restores the known version.</li>
+              <li>Entire’s checkpoint explains the intended outcome locally.</li>
+              <li>Databricks records a sanitized outcome with completeness clearly labelled.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="use-cases" class="section cases-section">
+        <div class="section-label">04 / WHERE THIS HELPS</div>
+        <div class="section-heading">
+          <h2>Built for the migration<br /><em>nobody wants to own at 3am.</em></h2>
+          <p>Three common moments where context plus safe recovery changes the next action.</p>
+        </div>
+        <div class="cases-grid">
+          <article class="case-card"><span>01</span><h3>AI-authored schema changes</h3><p>An agent proposes a migration. Its recorded intent becomes the local explanation when validation fails—without copying the prompt into the warehouse.</p></article>
+          <article class="case-card"><span>02</span><h3>New rules meet legacy rows</h3><p>A business constraint rolls onto data that predates it. Delta catches the offender; Warden restores first, so a half-applied policy never becomes the incident.</p></article>
+          <article class="case-card"><span>03</span><h3>On-call schema recovery</h3><p>The engineer responding did not write the change. A checkpoint-guided explanation turns a blind rollback into a fast, informed correction.</p></article>
+        </div>
+      </section>
+
       <section id="privacy" class="section boundary-section">
-        <div class="section-label">02 / NOON CURVEBALL</div>
+        <div class="section-label">05 / NOON CURVEBALL</div>
         <div class="section-heading wide">
           <h2>Context is useful.<br /><em>It is not automatically shareable.</em></h2>
           <p>The security requirement changed the architecture, not merely the copy.</p>
@@ -100,7 +172,7 @@
       </section>
 
       <section id="proof" class="section proof-section">
-        <div class="section-label">03 / PROOF, NOT PROMISES</div>
+        <div class="section-label">06 / PROOF, NOT PROMISES</div>
         <div class="proof-grid">
           <article class="metric-card">
             <span class="metric">21</span><span class="metric-label">live Python tests passed</span>
@@ -124,7 +196,7 @@
 
       <section id="run" class="section run-section">
         <div class="run-copy">
-          <div class="section-label">04 / RUN IT</div>
+          <div class="section-label">07 / RUN IT</div>
           <h2>One calm checklist<br />before the risky command.</h2>
           <p>The preflight keeps the local checkpoint system and Databricks warehouse from becoming separate setup mysteries.</p>
         </div>
