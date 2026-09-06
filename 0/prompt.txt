@@ -1,0 +1,48 @@
+How projects are judged
+Entire main challenge — 100 points
+Criterion
+Points
+What strong evidence shows
+Problem and innovation
+20
+Clear user, specific problem, useful new capability and a real use of Entire.
+Technical implementation
+25
+Working end-to-end workflow, sensible architecture, important behaviors tested and failures handled safely.
+Response to the Curveball
+15
+Constraint addressed completely; assumptions revisited; response implemented, tested and explained.
+Use of Entire Checkpoints
+15
+Checkpoints preserve useful intent and decision context; the fresh session can resume from them.
+Use of Entire Graph
+15
+Graph evidence identifies relevant code or impact; findings are verified against source and tests.
+Demonstration and future potential
+10
+Clear, reproducible demo; limits acknowledged; credible next step.
+
+
+Best Use of Databricks — 100 points
+Criterion
+Points
+What strong evidence shows
+Meaningful use
+30
+Databricks is essential to a core workflow and materially improves what the product can do.
+Working implementation and reliability
+25
+Judges can reproduce or inspect the path; failure handling and fallback evidence are credible.
+User value and product decisions
+20
+Specific user need, focused scope and sensible trade-offs.
+Data quality, provenance and responsible use
+15
+Permitted data, traceable transformations, disclosed limits and safe handling.
+Curveball response
+10
+The Databricks-backed workflow adapts to the new constraint and the changed behavior is verified.
+
+---
+
+codex is also done
