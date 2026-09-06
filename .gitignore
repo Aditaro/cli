@@ -71,3 +71,6 @@ tmp/
 entire-external-cp-test/
 /skills/
 /git-remote-entire
+__pycache__/
+*.pyc
+.pytest_cache/

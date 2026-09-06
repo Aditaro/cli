@@ -137,3 +137,40 @@ Then also run `python3 -m pytest warden/ databricks/ -q` (all tests, both dirs).
 
 ## Blocked / open questions
 _(none yet)_
+
+## NOON CURVEBALL — Track 1: Privacy Boundary (read this first in the fresh session)
+
+**Do not start editing before running the graph impact step below — the scoring
+explicitly downgrades graph use that happens after implementation.**
+
+New constraints from the security team:
+1. Raw prompts/transcripts must not be sent to a new external service.
+2. Must keep working (usefully) when checkpoint fields are redacted/unavailable.
+3. Existing local functionality must not regress.
+4. Interface must clearly distinguish complete vs. incomplete context.
+5. At least one test using redacted/missing checkpoint data.
+6. Never present incomplete context as complete/authoritative.
+
+**The assumption this invalidates:** `warden/migrate.py`'s `get_latest_checkpoint()`
+pulls the full raw checkpoint intent text (`entire checkpoint explain <id> --short`),
+and `log_attempt()` writes that raw text straight into `warden.migration_log.note`
+in Databricks — an external service outside Entire's own boundary. We assumed
+"more context in the log is better." That assumption is now wrong.
+
+**First steps in the fresh session, in order:**
+1. `entire checkpoint explain b8c9fe619` (or whatever the latest checkpoint ID is
+   via `entire checkpoint list`) — reconstruct intent/architecture/completed/open
+   risks from there, not from any prior conversation memory.
+2. `entire graph impact --repo . --symbol get_latest_checkpoint --head --profile fast`
+   and the same for `log_attempt` — BEFORE editing either function. This also
+   satisfies the still-outstanding "graph search or definition lookup" deliverable
+   if paired with `entire graph search --repo . --profile full --query "where checkpoint intent is sent to an external service"`.
+3. Implement: strip/redact the intent text before it reaches Databricks (keep full
+   text in local console output only, which stays on-machine). Add a
+   `context_completeness` field (`"complete" | "redacted" | "unavailable"`) to
+   both the console output and the `migration_log` row, so nothing downstream can
+   mistake partial context for complete. Handle a checkpoint whose intent is
+   `None`/redacted without crashing, and without ever claiming it as fact.
+4. Test with a redacted/missing-checkpoint fixture (get it from Adit — it was
+   handed out at the event, not yet in this repo).
+5. Final checkpoint: explain the assumption that changed, what changed, why it's safe, and that existing (non-redacted) behavior still works.
