@@ -121,3 +121,9 @@ also can you setup omniroute for youself so that we can actually power through t
 <status>completed</status>
 <summary>Background command "Verify migration_log rows and current table version" completed (exit code 0)</summary>
 </task-notification>
+
+---
+
+we have about 15 minute, we can give codex a larger portion of the tasks, so that we can manage the context and usage, so do that and it finished its work right now, and at the same time. 
+
+your usage limit resets at 2:20 so we are in not too bad of a position
