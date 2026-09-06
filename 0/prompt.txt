@@ -1,0 +1,7 @@
+Tell Codex: it's idle and its last task (pre-noon freeze verification) predates today's code change, so have it re-verify live against the new code:
+
+▎ Pull latest (cc16573cc+), then run set -a; source .env; set +a; bash warden/demo.sh and python3 -m pytest warden/ databricks/ -q for real against the live warehouse. Confirm: (a) the ALTER TABLE ... ADD COLUMNS backfill succeeds against the already-existing warden.migration_log table, (b) the most recent log row shows a context_completeness value, (c) the printed row's note does not contain raw checkpoint intent text. Report full real output in ## Done, don't fix anything yourself.
+
+---
+
+check tasks.md and continue

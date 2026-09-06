@@ -1,0 +1,61 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TSYZ5VC1828RZAC7ZHWP2S",
+  "session_id": "01a0757c-b060-7432-b490-f0374c27d783",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T07:29:43.395010593Z",
+  "branch": "handoff",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [
+    "TASKS.md",
+    "databricks/create_dashboard.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-luna",
+  "turn_id": "421dd2812729",
+  "checkpoint_transcript_start": 243,
+  "transcript_lines_at_start": 243,
+  "compact_transcript_start": 34,
+  "token_usage": {
+    "input_tokens": 54845,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 956416,
+    "output_tokens": 5553,
+    "api_call_count": 16
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-06T07:29:43.247775948Z",
+    "agent_lines": 212,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 212,
+    "total_lines_changed": 212,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    }
+  ]
+}
