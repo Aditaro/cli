@@ -389,3 +389,30 @@ i want to make it 95 for both, lets try to do that we still have over 20 min
 ---
 
 check tasks.md and lmk what to tell codex to look into quickly, also paralleize your work use subagents
+
+---
+
+<task-notification>
+<task-id>a4bb2a70a42321526</task-id>
+<tool-use-id>toolu_01A893DRuk8QNR6CafF1nL3k</tool-use-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/a67113eb-8bf5-4f12-a894-98e2726c95df/tasks/a4bb2a70a42321526.output</output-file>
+<status>completed</status>
+<summary>Agent "Audit submission docs for overclaims" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Audit complete. Read BUILDATHON.md end to end at HEAD `2b7e88221` and cross-checked every claim against that tree.
+
+**No Phase 2 leakage** — `orchestrate.py`, `health_report.py`, `002_*`, `demo_users_clean`, `manifest.example.json` are absent from the tree, and the only mention (line 172) correctly labels them as living on `handoff` past this commit and explains why they're excluded. Clean.
+
+**Both advertised credential-free commands work:** `bash warden/demo.sh --self-test` → exit 0; `pytest warden/ databricks/ -q` → 18 passed, 3 skipped. All claimed line numbers are exact (`log_attempt`:180, `apply_migration`:246, `main`:337, `ensure_log_table`:149), and `test_ensure_log_table_propagates_non_duplicate_alter_errors` exists.
+
+Prioritized findings:
+
+**1. HIGH — BUILDATHON.md:63 directly contradicts lines 35–45.** Line 63 states log_attempt's query "exceeded the local 30-second Graph window" and "that unavailable Graph result is **not presented as a successful finding**." But lines 35–45 now do exactly that, presenting the completed warm-index result. A judge reading top-to-bottom hits the success at :35, then a claim at :63 that it failed and wasn't used. Line 63 is stale — it predates the re-run. Delete it or fold its still-valid `get_latest_checkpoint` content into :35's block.
+
+**2. LOW — lines 166 and 168 are near-duplicate paragraphs** about `resume_report.py`, four lines apart, both opening with the same command. :168 supersedes :166 (adds the leak-proof test detail). Reads as an editing artifact.
+
+**3. LOW — line 61 says "the five checkpoint tests."** There are 6 matching `get_latest_checkpoint`/`classify_completeness` tests (4 + classify + describe_failure-with-redacted). Undercount, harmless, but "six" or "the checkpoint tests" is safer.
+
+No overclaims, no failing instructions, no invented capabilities found. Fix #1 if you have minutes; #2 and #3 are cosmetic.</result>
+<usage><subagent_tokens>418038</subagent_tokens><tool_uses>5</tool_uses><duration_ms>44536</duration_ms></usage>
+</task-notification>
