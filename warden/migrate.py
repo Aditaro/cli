@@ -148,7 +148,7 @@ def apply_migration(migration_path, table, validate_sql_path):
             print(f"[warden] validation {'passed' if offending_rows == 0 else 'FAILED'} ({offending_rows} offending row(s))")
 
         if offending_rows == 0:
-            log_attempt(cur, migration_path, "success", cp_id, "applied cleanly, validation passed")
+            log_attempt(cur, migration_path, "applied", cp_id, "applied cleanly, validation passed")
             print("[warden] SUCCESS.")
             return 0
 
@@ -157,7 +157,13 @@ def apply_migration(migration_path, table, validate_sql_path):
     except Exception as e:
         print(f"[warden] FAILURE: {e}")
         print(f"[warden] healing: restoring '{table}' to Delta version {pre_version} via time-travel...")
-        cur.execute(f"RESTORE TABLE {table} TO VERSION AS OF {pre_version}")
+        try:
+            cur.execute(f"RESTORE TABLE {table} TO VERSION AS OF {pre_version}")
+        except Exception as heal_error:
+            # The heal itself failed -- this is the genuinely unrecoverable case.
+            # Log it as such rather than silently losing the failure.
+            log_attempt(cur, migration_path, "failed", cp_id, f"migration failed ({e}) AND rollback failed ({heal_error})")
+            raise
         explanation = (
             f"Migration '{migration_path}' failed: {e}\n\n"
             f"Recorded intent (checkpoint {cp_id or 'unavailable'}):\n{intent or '(no intent recorded)'}\n\n"
