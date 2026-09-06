@@ -1,0 +1,1 @@
+how should we use opencode and such based on teh current usecase should i give it a prompt and have a shared md that we use as instructions and ocntext that you and it update and refer to know what to work on and develop next
