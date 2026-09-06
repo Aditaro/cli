@@ -1,0 +1,208 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TZZ24EWERSZWETBFZ3VQWV",
+  "session_id": "a67113eb-8bf5-4f12-a894-98e2726c95df",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T09:14:42.081921641Z",
+  "branch": "safe-submission",
+  "checkpoints_count": 1,
+  "save_step_count": 6,
+  "files_touched": [
+    "warden/test_migrate.py"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "2d109f867ccc",
+  "checkpoint_transcript_start": 1572,
+  "transcript_lines_at_start": 1572,
+  "compact_transcript_start": 288,
+  "token_usage": {
+    "input_tokens": 16,
+    "cache_creation_tokens": 12581,
+    "cache_read_tokens": 3349399,
+    "output_tokens": 9887,
+    "api_call_count": 8,
+    "subagent_tokens": {
+      "input_tokens": 4,
+      "cache_creation_tokens": 1434,
+      "cache_read_tokens": 832732,
+      "output_tokens": 1181,
+      "api_call_count": 2
+    }
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01HoRN3TQ7kBEyn6cRwKpfxJ",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:brainstorming"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "803eec8090fc",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 451,
+        "end": 452,
+        "entry_ids": [
+          "b6cffff7-333b-41ae-a4b9-3bab7a060177"
+        ],
+        "tool_use_id": "toolu_01HoRN3TQ7kBEyn6cRwKpfxJ"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01HoRN3TQ7kBEyn6cRwKpfxJ"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:brainstorming",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-claude-code-code-review-2026-09-06T08:57:09.512836774Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "code-review"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "7df55a038b9f",
+      "timestamp": "2026-09-06T08:57:09.512836774Z",
+      "native": {
+        "command": "/code-review"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/code-review",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 12
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-06T09:14:41.23013649Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 69,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 69,
+    "total_lines_changed": 69,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 23,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 61,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    }
+  ]
+}
