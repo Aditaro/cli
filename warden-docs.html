@@ -1,0 +1,383 @@
+<title>Warden Technical Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;1,400&display=swap">
+<style>
+  :root{
+    --ground:#0F1620;--surface:#18222F;--surface-2:#1F2C3C;--line:#2A3949;--line-2:#3A4B5E;
+    --ink:#E9EEF5;--ink-2:#B8C7D9;--muted:#8CA0B8;
+    --safe:#4DD4AC;--safe-dim:#16332E;--warn:#E8825A;--warn-dim:#3A2018;
+    --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+    --serif:'IBM Plex Serif',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink-2);font-family:var(--sans);
+    font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased}
+
+  .wrap{display:grid;grid-template-columns:246px minmax(0,1fr);gap:0;max-width:1240px;margin:0 auto}
+  @media (max-width:900px){.wrap{grid-template-columns:1fr}}
+
+  /* nav */
+  nav{position:sticky;top:0;align-self:start;max-height:100vh;overflow-y:auto;
+    padding:38px 22px 38px 26px;border-right:1px solid var(--line)}
+  @media (max-width:900px){nav{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}}
+  nav .brand{font-weight:600;color:var(--ink);font-size:16px;letter-spacing:-.01em;margin:0 0 2px}
+  nav .brandsub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.09em;
+    text-transform:uppercase;margin:0 0 24px}
+  nav ol{list-style:none;padding:0;margin:0;counter-reset:s;display:flex;flex-direction:column;gap:1px}
+  nav a{display:block;padding:5px 0;color:var(--muted);text-decoration:none;font-size:13.5px;line-height:1.4}
+  nav a:hover{color:var(--safe)}
+  nav a:focus-visible{outline:2px solid var(--safe);outline-offset:2px}
+
+  main{padding:38px clamp(20px,4vw,58px) 100px;min-width:0}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:26px;margin-bottom:34px}
+  h1{font-size:clamp(31px,4.4vw,46px);line-height:1.06;letter-spacing:-.025em;color:var(--ink);
+    margin:0 0 14px;font-weight:600;text-wrap:balance}
+  .lede{font-size:18px;line-height:1.55;color:var(--ink);max-width:62ch;margin:0 0 18px}
+  h2{font-size:clamp(21px,2.6vw,27px);line-height:1.18;letter-spacing:-.015em;color:var(--ink);
+    margin:52px 0 14px;font-weight:600;padding-top:14px;border-top:1px solid var(--line);text-wrap:balance}
+  h2:first-of-type{margin-top:0}
+  h3{font-size:16.5px;color:var(--ink);margin:28px 0 9px;font-weight:600;letter-spacing:-.005em}
+  h4{font-size:13px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.1em;
+    color:var(--muted);margin:24px 0 9px;font-weight:500}
+  p{margin:0 0 15px;max-width:70ch}
+  a{color:var(--safe)}
+  strong{color:var(--ink);font-weight:600}
+  em{font-style:italic}
+  .safe{color:var(--safe)}.warn{color:var(--warn)}
+  code{font-family:var(--mono);font-size:.875em;background:var(--surface-2);padding:1.5px 5px;
+    border-radius:3px;color:var(--ink);font-variant-numeric:tabular-nums}
+  pre{background:#0A1017;border:1px solid var(--line);border-radius:5px;padding:15px 17px;
+    overflow-x:auto;margin:0 0 18px;font-size:13px;line-height:1.62}
+  pre code{background:none;padding:0;font-size:inherit;color:var(--ink-2)}
+  pre .c{color:var(--muted)}pre .g{color:var(--safe)}pre .r{color:var(--warn)}pre .w{color:var(--ink)}
+
+  ul,ol.body{margin:0 0 16px;padding-left:20px;max-width:70ch}
+  li{margin-bottom:8px}
+  li::marker{color:var(--muted)}
+
+  table{width:100%;border-collapse:collapse;margin:0 0 20px;font-size:14px;display:block;overflow-x:auto}
+  th,td{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.09em;
+    color:var(--muted);font-weight:500;white-space:nowrap}
+  td code{white-space:nowrap}
+
+  .note{border-left:2px solid var(--safe);background:var(--safe-dim);padding:14px 17px;
+    margin:0 0 20px;border-radius:0 4px 4px 0;max-width:72ch}
+  .note.w{border-left-color:var(--warn);background:var(--warn-dim)}
+  .note p{margin:0;font-size:14.5px}
+  .note p+p{margin-top:9px}
+  .note .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--safe);display:block;margin-bottom:6px}
+  .note.w .lbl{color:var(--warn)}
+
+  .flow{display:flex;flex-direction:column;gap:0;margin:22px 0 24px;max-width:72ch}
+  .fstep{display:grid;grid-template-columns:34px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+  .fstep:last-child{border-bottom:0}
+  .fnum{font-family:var(--mono);font-size:12px;color:var(--safe);padding-top:3px;font-weight:500}
+  .fstep.is-warn .fnum{color:var(--warn)}
+  .fstep h3{margin:0 0 3px;font-size:15px}
+  .fstep p{margin:0;font-size:14px;color:var(--muted);max-width:none}
+
+  .files{font-size:14px}
+  .files td:first-child{white-space:nowrap;padding-right:20px}
+  .files td:first-child code{color:var(--safe)}
+  .files td:nth-child(2){font-variant-numeric:tabular-nums;color:var(--muted);padding-right:20px}
+
+  footer{border-top:1px solid var(--line);margin-top:56px;padding-top:22px;font-size:13px;color:var(--muted)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<nav>
+  <p class="brand">Warden</p>
+  <p class="brandsub">Technical reference</p>
+  <ol>
+    <li><a href="#what">1 · What Warden is</a></li>
+    <li><a href="#quick">2 · Quick start</a></li>
+    <li><a href="#arch">3 · Architecture</a></li>
+    <li><a href="#privacy">4 · The privacy boundary</a></li>
+    <li><a href="#entire">5 · Entire integration</a></li>
+    <li><a href="#databricks">6 · Databricks integration</a></li>
+    <li><a href="#files">7 · File reference</a></li>
+    <li><a href="#testing">8 · Testing</a></li>
+    <li><a href="#decisions">9 · Decisions &amp; rejected options</a></li>
+    <li><a href="#limits">10 · Limits</a></li>
+    <li><a href="#roadmap">11 · Roadmap</a></li>
+    <li><a href="#evidence">12 · Verification evidence</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <h1>Warden</h1>
+  <p class="lede">A checkpoint-native migration guard for Databricks Delta tables. When a migration fails, Warden rolls the table back through Delta time-travel <em>and</em> explains what the migration was trying to achieve — using intent recorded in an Entire checkpoint, never a guess reconstructed from a diff.</p>
+  <p style="font-size:14px;color:var(--muted);max-width:70ch">Built for the Bengaluru Tech Week Buildathon, Entire Track 1 (Checkpoint-Native Developer Experience), with Best Use of Databricks opted in. Every figure in this document is real output captured from a live warehouse — nothing here is illustrative.</p>
+</header>
+
+<h2 id="what">1 · What Warden is</h2>
+<p>A migration fails. The standard response is a blind revert: the schema returns to its previous state, and every trace of <em>why</em> the change was attempted goes with it. The engineer handling the incident — often not the person who wrote the migration — reconstructs intent from a commit message under time pressure.</p>
+<p>Warden closes that gap. It reads the recorded intent for a change <em>before</em> touching the warehouse, applies the migration, validates it, and on failure restores the table through Delta time-travel while surfacing that recorded intent to the operator. The rollback primitive itself is ordinary; what is not ordinary is that the recovery can say what was being attempted.</p>
+
+<div class="note">
+  <span class="lbl">The distinction that matters</span>
+  <p><strong>Checkpoint-driven, not checkpoint-logged.</strong> Many tools write a checkpoint as a side effect of doing work. Warden <em>reads</em> one to make the recovery useful. Remove Entire and the feature does not degrade — it disappears.</p>
+</div>
+
+<h4>Scope, stated up front</h4>
+<p>One Delta table, one migration, one validation rule, one healing path. This is a deliberately narrow vertical slice proven end-to-end, not a general migration framework. <a href="#limits">Section 10</a> lists what that excludes.</p>
+
+<h2 id="quick">2 · Quick start</h2>
+
+<h3>Verify without any credentials</h3>
+<p>Both of these run on a clean checkout with no Databricks account, and are the fastest way to confirm the repository is intact:</p>
+<pre><code><span class="c"># fixture + seed integrity check — exits non-zero if anything is broken</span>
+bash warden/demo.sh --self-test
+
+<span class="c"># unit suite (18 pass, 3 live-integration tests skip cleanly)</span>
+python3 -m pytest warden/ databricks/ -q</code></pre>
+
+<h3>Run the live demo</h3>
+<pre><code><span class="c"># 1. credentials — gitignored .env, never committed</span>
+echo 'DATABRICKS_SERVER_HOSTNAME=...' &gt;&gt; .env
+echo 'DATABRICKS_HTTP_PATH=...'       &gt;&gt; .env
+echo 'DATABRICKS_TOKEN=...'           &gt;&gt; .env
+set -a; source .env; set +a
+
+<span class="c"># 2. provision the table and synthetic seed data</span>
+python3 -c "from databricks import sql; import os; c=sql.connect(
+  server_hostname=os.environ['DATABRICKS_SERVER_HOSTNAME'],
+  http_path=os.environ['DATABRICKS_HTTP_PATH'],
+  access_token=os.environ['DATABRICKS_TOKEN']); cur=c.cursor();
+  cur.execute('CREATE SCHEMA IF NOT EXISTS warden');
+  [cur.execute(s) for s in open('databricks/setup.sql').read().split(';') if s.strip()]"
+python3 databricks/seed.py
+
+<span class="c"># 3. the full fail → heal loop</span>
+bash warden/demo.sh</code></pre>
+
+<div class="note w">
+  <span class="lbl">Free Edition caveat</span>
+  <p>A Databricks Free Edition warehouse spins down when idle and can take 30–60s to cold-start. If the demo appears to hang on its first query, that is the warehouse waking, not a failure. <code>warden/demo-recording.txt</code> holds a captured successful run for exactly this situation.</p>
+</div>
+
+<h2 id="arch">3 · Architecture</h2>
+<p>One command drives the whole loop: <code>python3 warden/migrate.py &lt;migration.sql&gt; --validate-sql &lt;check.sql&gt;</code>. Everything below happens inside <code>apply_migration()</code> (<code>warden/migrate.py:246</code>).</p>
+
+<div class="flow">
+  <div class="fstep"><div class="fnum">01</div><div>
+    <h3>Read recorded intent</h3>
+    <p><code>get_latest_checkpoint()</code> lists checkpoints as JSON, filters to <em>committed</em> ones only, and explains the most recent. In-progress shadow checkpoints are skipped deliberately — their intent can still change, so they are not settled evidence.</p></div></div>
+  <div class="fstep"><div class="fnum">02</div><div>
+    <h3>Impact analysis, before the change</h3>
+    <p><code>graph_impact()</code> shells out to <code>entire graph impact</code>. On timeout or error it returns an explicit <code>(graph impact unavailable: …)</code> string rather than silently skipping — graph output is evidence, never asserted as fact.</p></div></div>
+  <div class="fstep"><div class="fnum">03</div><div>
+    <h3>Record the pre-migration version, then apply</h3>
+    <p><code>current_delta_version()</code> reads <code>DESCRIBE HISTORY … LIMIT 1</code>. That version number is the rollback target, captured before any statement executes.</p></div></div>
+  <div class="fstep is-warn"><div class="fnum">04</div><div>
+    <h3>Validate — from either of two sources</h3>
+    <p>The supplied validation query runs as an independent check. <em>In this demo it is never reached:</em> Delta validates existing rows at <code>ADD CONSTRAINT</code> time, so the <code>ALTER TABLE</code> itself throws first. The healing logic catches a failure from either source, because not every migration uses a Delta <code>CHECK</code>.</p></div></div>
+  <div class="fstep"><div class="fnum">05</div><div>
+    <h3>Heal</h3>
+    <p><code>RESTORE TABLE … TO VERSION AS OF &lt;pre_version&gt;</code>. This is a metadata operation — it repoints the transaction log rather than rewriting data, which is why it is viable on large tables.</p></div></div>
+  <div class="fstep"><div class="fnum">06</div><div>
+    <h3>Explain locally, log safely</h3>
+    <p><code>describe_failure()</code> returns a pair: <code>console_text</code> carrying the full intent and error for the operator, and <code>db_note</code> carrying neither for the warehouse. See <a href="#privacy">section 4</a>.</p></div></div>
+</div>
+
+<h3>Failure modes and how each is handled</h3>
+<table>
+  <tr><th>Condition</th><th>Behaviour</th><th>Logged status</th></tr>
+  <tr><td>Validation passes</td><td>Migration stands</td><td><code class="safe">applied</code></td></tr>
+  <tr><td>Migration or validation fails, rollback succeeds</td><td>Table restored to pre-version</td><td><code class="safe">healed</code></td></tr>
+  <tr><td>Rollback <em>itself</em> fails</td><td>Error re-raised; both exception types logged, neither message</td><td><code class="warn">failed</code></td></tr>
+  <tr><td>Version lookup fails before apply</td><td>Rollback skipped — no safe target exists — and reported as such</td><td><code class="warn">failed</code></td></tr>
+  <tr><td>Entire unavailable / checkpoint missing</td><td>Proceeds with <code>context_completeness = unavailable</code></td><td>unchanged</td></tr>
+  <tr><td>Databricks env vars missing</td><td>Fails closed with a named list of what is absent</td><td>—</td></tr>
+</table>
+<p>The third row is the genuinely unrecoverable case: the table is left un-restored. It is recorded as <code>failed</code> and never as <code>healed</code>, because misreporting an un-restored table as healed is the worst available outcome. That path is covered by a dedicated test.</p>
+
+<h2 id="privacy">4 · The privacy boundary</h2>
+<p>This began as the Buildathon's Noon Curveball and became the most substantial part of the system. The constraint: raw checkpoint intent must not reach an external service; the tool must still work when checkpoint fields are redacted or missing; and incomplete context must never be presented as complete.</p>
+
+<div class="note w">
+  <span class="lbl">The assumption that broke</span>
+  <p>Warden had been writing the full checkpoint explanation into <code>warden.migration_log.note</code> — a Databricks table, outside Entire's local boundary. The working assumption, <em>"more context in the log is better"</em>, was exactly wrong: a checkpoint can contain prompts and transcript text, and the log is the one place that content was crossing a trust boundary.</p>
+</div>
+
+<h3>Three mechanisms</h3>
+
+<h4>context_completeness</h4>
+<p><code>classify_completeness()</code> (<code>migrate.py:70</code>) returns <code>complete</code>, <code>redacted</code>, or <code>unavailable</code>. Redaction is detected via Entire's own marker shape — a regex matching bare <code>REDACTED</code> or <code>[REDACTED_&lt;LABEL&gt;]</code>, anchored so ordinary prose containing the word does not false-positive. The label is written to every log row and printed on every console run, so no downstream reader can mistake partial context for whole.</p>
+
+<h4>LocalOnlyText</h4>
+<p>The important property here is that the guarantee is <em>structural</em> rather than conventional. Intent is wrapped in a small class whose <code>__str__</code> and <code>__repr__</code> return a placeholder, never the real text:</p>
+<pre><code><span class="c"># the naive mistake — interpolating the wrapper into an outbound string</span>
+note = f"migration note: {intent}"
+<span class="c"># → "migration note: &lt;local-only text, use .reveal() explicitly&gt;"</span></code></pre>
+<p>The real text is reachable only through an explicit <code>.reveal()</code>, which appears at exactly two genuinely local sites: the console print in <code>apply_migration</code>, and <code>console_text</code> in <code>describe_failure</code>. A future contributor who forgets the boundary gets a visibly wrong placeholder in a log row rather than a silent data leak — the failure mode changes from invisible to obvious.</p>
+
+<h4>error_summary</h4>
+<p>This one was not in the brief. Reviewing the fix raised the question of where <em>else</em> the same shape of leak could occur, and the answer was already in the code: database error text. Some Delta constraint violations embed the offending row's column values directly in the message (<code>DELTA_VIOLATE_CONSTRAINT_WITH_VALUES</code>, raised on writes against an existing constraint). Forwarding a raw exception to the log would leak table data through a different door than the one just closed.</p>
+<p><code>error_summary()</code> reduces any exception to its type name before it crosses the boundary. The full message still prints locally for triage.</p>
+
+<div class="note">
+  <span class="lbl">Verified live, in production data</span>
+  <p>The demo's own failure raises <code>DELTA_NEW_CHECK_CONSTRAINT_VIOLATION</code> — the <code>ADD CONSTRAINT</code> variant, which reports only a row <em>count</em>, not values. So this specific run was never exposed to the value-embedding variant. <code>error_summary()</code> is a blanket guard for migrations that would hit it, not a reaction to this one. The logged row confirms the outcome: the note contains <code>ServerOperationError</code> and nothing else.</p>
+</div>
+
+<h3>What actually reaches Databricks</h3>
+<table>
+  <tr><th>Field</th><th>Contents</th></tr>
+  <tr><td><code>status</code></td><td><code>applied</code> / <code>healed</code> / <code>failed</code></td></tr>
+  <tr><td><code>checkpoint_id</code></td><td>The identifier only — a pointer, never the content</td></tr>
+  <tr><td><code>context_completeness</code></td><td><code>complete</code> / <code>redacted</code> / <code>unavailable</code></td></tr>
+  <tr><td><code>note</code></td><td>Migration path, table, Delta version, exception <em>type</em>, and a pointer to the operator console</td></tr>
+</table>
+<p>Raw checkpoint intent and raw error messages appear in neither, in any code path — including the unrecoverable one.</p>
+
+<h2 id="entire">5 · Entire integration</h2>
+
+<h3>Checkpoints</h3>
+<p>Warden calls <code>entire checkpoint list --json</code> and <code>entire checkpoint explain &lt;id&gt; --short</code> through <code>run_entire()</code>, a wrapper that never raises — every failure degrades to a warning and an explicit <code>unavailable</code> classification. A migration tool that crashed because a checkpoint could not be read would be worse than one that proceeds and says so.</p>
+<p><code>warden/resume_report.py</code> productises the read side. Given a checkpoint ID it reports completeness, the migration target, the latest safe log status, and a recommended next action — <em>without ever revealing checkpoint text</em>. It never calls <code>.reveal()</code>, and a test plants a secret to prove its output cannot carry one.</p>
+
+<h4>The fresh-session criterion</h4>
+<p>Track 1 asks whether a fresh session can resume from these checkpoints. That was not staged here — it is how the Curveball response was produced. Commit <code>0d29a022c</code> deliberately ended the prior session at a stable point. A new session with no conversational memory began with <code>entire checkpoint explain 0d29a022c</code>, reconstructed the architecture, located the offending assumption, ran impact analysis before editing, and implemented the entire privacy boundary. Every commit from <code>cc16573cc</code> onward is that session's output.</p>
+
+<h3>Graph</h3>
+<p>Impact analysis runs before the migration lands. The first real result was honest and unhelpful — <code>IMPACT DEGENERATE: warden.demo_users has no callers</code> — which is correct for a newly introduced symbol, and was reported rather than hidden.</p>
+<p>The valuable result came from pointing the Graph at the functions the Curveball actually changed:</p>
+<pre><code><span class="c">$ entire graph diff --base b8c9fe619 --head HEAD</span>
+
+warden/migrate.py <span class="c">(Python)</span>
+  <span class="g">+ class LocalOnlyText added</span>
+  <span class="g">+ function classify_completeness added</span>
+  <span class="g">+ function error_summary added</span>
+  ~ function get_latest_checkpoint body changed <span class="c">(6 dependents)</span>
+  <span class="w">~ function log_attempt signature changed  (2 dependents)</span>
+  ~ function apply_migration body changed <span class="c">(4 dependents)</span></code></pre>
+<p>That signature change <em>is</em> the privacy boundary: <code>log_attempt</code> gained the <code>context_completeness</code> parameter, and it is the single function that writes to the external service. Its two dependents are precisely the applied and healed call sites, each covered by a test — so the Graph's claimed blast radius and the suite's coverage agree. A direct impact query on <code>log_attempt</code> confirms the same two callers and one callee (<code>ensure_log_table</code>).</p>
+
+<h2 id="databricks">6 · Databricks integration</h2>
+<h3>Load-bearing</h3>
+<ul>
+  <li><strong>Delta time-travel is the rollback.</strong> <code>RESTORE TABLE … TO VERSION AS OF</code> is the healing primitive. Without Delta's transaction log there is no version to restore to, and the product's central claim collapses.</li>
+  <li><strong>Delta <code>CHECK</code> enforcement is the failure trigger.</strong> Adding the constraint validates existing rows server-side at <code>ADD CONSTRAINT</code> time. The migration fails inside Delta, not inside our validation code — which is a stronger guarantee than a query we wrote.</li>
+  <li><strong>A real Lakeview dashboard</strong> over <code>migration_log</code>, created through the Lakeview REST API by <code>databricks/create_dashboard.py</code> — a workspace object, not a checked-in query file.</li>
+</ul>
+
+<h3>Portable, and worth saying</h3>
+<p>The connector calls, the log table, and the seeding path would work against any SQL warehouse. Roughly the rollback and constraint mechanics are genuinely Delta-specific; the surrounding plumbing is not. Overstating that would be easy and wrong.</p>
+
+<h3>Data provenance</h3>
+<p>Synthetic only. <code>databricks/seed.py</code> generates exactly 50 deterministic users on the reserved <code>example.invalid</code> domain (RFC 6761 — guaranteed never resolvable, so no real address can be implied). User 007 carries <code>plan='legacy'</code>, which is the single row that violates the constraint, making the demo failure reproducible rather than incidental. No production or personal data is used anywhere.</p>
+
+<h2 id="files">7 · File reference</h2>
+<table class="files">
+  <tr><th>File</th><th>Lines</th><th>Role</th></tr>
+  <tr><td><code>warden/migrate.py</code></td><td>348</td><td>The whole loop: checkpoint read, graph impact, apply, validate, heal, log. Contains <code>LocalOnlyText</code>, <code>classify_completeness</code>, <code>error_summary</code>, <code>describe_failure</code>.</td></tr>
+  <tr><td><code>warden/resume_report.py</code></td><td>124</td><td>Read-only readiness report from a checkpoint ID. Never reveals intent.</td></tr>
+  <tr><td><code>warden/demo.sh</code></td><td>96</td><td>One-command demo: pre-version → migrate → log row → post-version. <code>--self-test</code> runs with no credentials.</td></tr>
+  <tr><td><code>warden/test_migrate.py</code></td><td>305</td><td>Unit suite: checkpoint degradation, redaction classification, both leak boundaries, the unrecoverable heal path.</td></tr>
+  <tr><td><code>warden/test_resume_report.py</code></td><td>36</td><td>Proves a planted secret cannot appear in report output.</td></tr>
+  <tr><td><code>warden/demo-recording.txt</code></td><td>58</td><td>Captured successful live run — the fallback if the warehouse is unavailable.</td></tr>
+  <tr><td><code>databricks/setup.sql</code></td><td>11</td><td>The single Delta demo table.</td></tr>
+  <tr><td><code>databricks/seed.py</code></td><td>87</td><td>50 synthetic rows with one deliberate offender. <code>--self-test</code> validates generation without a connection.</td></tr>
+  <tr><td><code>databricks/create_dashboard.py</code></td><td>170</td><td>Creates/updates the Lakeview dashboard via REST. Re-runnable; prints the workspace URL.</td></tr>
+  <tr><td><code>databricks/test_integration.py</code></td><td>71</td><td>Live-warehouse assertions; skips cleanly without credentials.</td></tr>
+  <tr><td><code>databricks/dashboard_queries.sql</code></td><td>17</td><td>Attempts vs. heals vs. failures per day.</td></tr>
+  <tr><td><code>migrations/001_add_plan_column.sql</code></td><td>5</td><td>The demo migration — adds a <code>CHECK</code> constraint on <code>plan</code>.</td></tr>
+  <tr><td><code>migrations/001_validate.sql</code></td><td>10</td><td>Returns offending rows; zero rows means pass.</td></tr>
+</table>
+
+<h2 id="testing">8 · Testing</h2>
+<p><strong>19 tests pass</strong> without credentials (18 unit, plus 3 live-integration tests that skip cleanly); <strong>21 with</strong> credentials configured. The suite is deliberately weighted toward the boundaries rather than the happy path.</p>
+
+<h3>What is actually pinned</h3>
+<ul>
+  <li><strong>Both leak boundaries.</strong> Separate tests plant a secret intent and a secret row value, then assert neither reaches the outbound note — while confirming the console text <em>does</em> carry them, so the test cannot pass vacuously.</li>
+  <li><strong>The unrecoverable path.</strong> Migration fails <em>and</em> rollback fails: asserts the outcome is recorded <code>failed</code> not <code>healed</code>, that only exception type names cross the boundary, and that the error re-raises rather than being swallowed.</li>
+  <li><strong>Checkpoint degradation.</strong> Entire missing, malformed JSON, empty explain output, and redacted intent each classify correctly instead of crashing.</li>
+  <li><strong>Schema evolution.</strong> The log table's <code>ALTER</code> backfill ignores only a duplicate-column diagnostic and propagates genuine permission or connectivity failures.</li>
+</ul>
+
+<div class="note">
+  <span class="lbl">Proven non-vacuous by mutation</span>
+  <p>The privacy test is only worth having if it fails when the boundary breaks. Replacing <code>error_summary(e)</code> with the raw exception in the unrecoverable branch makes it fail on the planted value; restoring the guard makes it pass. A passing assertion that cannot fail is not coverage.</p>
+</div>
+
+<h3>Review history</h3>
+<p>Two independent automated review passes were run against the codebase. The first found two real defects in this code, both fixed: an <code>ALTER TABLE</code> backfill that swallowed every exception (which could misclassify a healthy migration as failed and trigger an unnecessary rollback), and an <code>UnboundLocalError</code> when the version lookup itself failed. The second found that <code>demo.sh --self-test</code> could never fail — it ran without <code>errexit</code>, so a broken repository still reported success. Also fixed, and verified in both directions.</p>
+
+<h2 id="decisions">9 · Decisions &amp; rejected options</h2>
+
+<h3>Pivoted from a checkpoint-mined onboarding tool</h3>
+<p>The original concept summarised checkpoint history into an onboarding briefing. It was rejected as safe but capped: it read checkpoints without ever <em>depending</em> on them for a decision. Warden makes the recovery itself checkpoint-driven, which is a stronger claim and a riskier build.</p>
+
+<h3>A wrapper type instead of a coding convention</h3>
+<p>The first version of the privacy fix was a rule plus a regression test. That is enforcement by review, and review is exactly what fails on a busy day. <code>LocalOnlyText</code> makes the safe behaviour the default and the unsafe one deliberate.</p>
+
+<h3>A multi-table scheduler was built and deliberately excluded</h3>
+<p>A bounded parallel scheduler and a health-report module were prototyped. Both passed unit tests. Both were left out of the submission because their accompanying seed change did not fully re-verify against the live warehouse before the deadline, and shipping an unverified change to the demo's own data path was the worse trade. A subsequent review pass then found several genuine defects in that layer — including an orchestration path that could roll back a migration which had actually succeeded — which retroactively confirmed the call.</p>
+
+<h3>Type names, not sanitised messages</h3>
+<p>Rather than attempt to scrub row values out of error text, <code>error_summary()</code> discards the message entirely and keeps only the exception type. Partial sanitisation invites a pattern that misses a case; discarding the message cannot.</p>
+
+<h2 id="limits">10 · Limits</h2>
+<ul>
+  <li><strong>One table, one migration, one validation path.</strong> Deliberate, and the reason it works end-to-end.</li>
+  <li><strong><code>RESTORE</code> depends on retention.</strong> If <code>VACUUM</code> has already purged the target version's files, the rollback fails outright. Production needs a retention policy that guarantees the rollback window survives.</li>
+  <li><strong>Validation is a full-table scan.</strong> At scale this must become partition-scoped or incremental.</li>
+  <li><strong>Authentication is a long-lived personal token.</strong> Production wants a service principal with short-lived OAuth credentials.</li>
+  <li><strong><code>checkpoint_id</code> is unsigned.</strong> Anyone with warehouse write access could forge one. An HMAC over <code>(checkpoint_id, migration_name)</code>, keyed locally, would make a log row's checkpoint claim verifiable.</li>
+  <li><strong>No access gate of its own.</strong> Anyone holding the three env vars can apply a migration. A real deployment should require a reviewed checkpoint, turning checkpoint-<em>driven</em> into checkpoint-<em>authorised</em>.</li>
+</ul>
+
+<h2 id="roadmap">11 · Roadmap</h2>
+<p>The ambition is a zero-downtime migration control plane for large, messy, bespoke schemas — the migrations a high-traffic platform cannot take offline for.</p>
+<ul>
+  <li><strong>Multi-table dependency-aware parallelism.</strong> Independent tables migrating concurrently under a declared worker bound; same-table work strictly ordered; a failure isolated to its own table rather than halting the run.</li>
+  <li><strong>Live progress instead of a terminal pass/fail.</strong> Rows processed, replay lag, current phase, warehouse spend — streamed, so an operator watches rather than waits. This is also what makes health alerts meaningful: a stall, lag past an SLO, or a rollback window approaching its retention limit are all mid-flight conditions.</li>
+  <li><strong>An operator in the loop.</strong> Inspect what validation caught, supply or correct offending rows, approve or hold a cutover. The checkpoint boundary already built is what makes exposing that safe — an agent can be shown <em>whether</em> context suffices without receiving the text.</li>
+  <li><strong>Versioned cache reads plus CDF write catch-up.</strong> Reads served from a stable version while the migration runs underneath; writes reconciled through Delta Change Data Feed or an outbox; compatibility-view cutover at the end. A cache alone only protects reads.</li>
+  <li><strong>The migrations that actually frighten people.</strong> Changing a primary key, splitting one table into several, merging several into one. These rewrite relationships rather than columns, so a blind revert is least acceptable exactly where it is most likely to be needed — and where "what was this trying to achieve?" is most expensive to reconstruct by hand.</li>
+</ul>
+
+<h2 id="evidence">12 · Verification evidence</h2>
+<p>Captured from a live Databricks Free Edition warehouse.</p>
+<pre><code><span class="c">[warden]</span> 'warden.demo_users' currently at Delta version <span class="w">153</span>
+<span class="c">[warden]</span> <span class="r">FAILURE: [DELTA_NEW_CHECK_CONSTRAINT_VIOLATION] 1 rows in</span>
+<span class="r">          workspace.warden.demo_users violate the new CHECK constraint</span>
+<span class="r">          (plan IN ('free', 'pro', 'enterprise'))</span>
+<span class="c">[warden]</span> healing: restoring 'warden.demo_users' to Delta version <span class="w">153</span> via time-travel…
+
+<span class="c">──</span> most recent row in warden.migration_log <span class="c">──</span>
+status=<span class="g">'healed'</span>
+context_completeness=<span class="g">'complete'</span>
+note=<span class="w">'migration failed (ServerOperationError); rolled back warden.demo_users</span>
+<span class="w">      to Delta version 153. Checkpoint intent and full error detail kept</span>
+<span class="w">      local-only (context: complete); see operator console for detail.'</span>
+
+<span class="c">──</span> post-migration Delta version <span class="c">──</span>
+Delta version: <span class="g">153</span>  <span class="c">← matches pre-migration; the heal is real, not a printed message</span></code></pre>
+<p>Note what is absent from that row: no checkpoint intent, and no database error text beyond the exception's type name. That is the privacy boundary observable in production data rather than asserted in a document.</p>
+
+<table>
+  <tr><th>Check</th><th>Result</th></tr>
+  <tr><td>Unit + integration suite, no credentials</td><td><code class="safe">18 passed, 3 skipped</code></td></tr>
+  <tr><td>Full suite with live credentials</td><td><code class="safe">21 passed</code></td></tr>
+  <tr><td>Credential-free self-test</td><td><code class="safe">exit 0</code>; broken fixture → <code class="warn">exit 1</code></td></tr>
+  <tr><td>Live demo end-to-end</td><td><code class="safe">exit 0</code>, pre/post version match at 153</td></tr>
+  <tr><td>Lakeview dashboard</td><td><code class="safe">HTTP 200</code>, lifecycle <code>ACTIVE</code></td></tr>
+  <tr><td>Fresh-environment checkpoint reconstruction</td><td>Recovered scope, files and next action from an ID alone</td></tr>
+  <tr><td>Repository secret scan</td><td>Clean; <code>.env</code> untracked and gitignored</td></tr>
+</table>
+
+<footer>
+  <p>Warden · Entire Track 1 (Checkpoint-Native Developer Experience) · Best Use of Databricks opted in.<br>
+  Built at the Bengaluru Tech Week Buildathon. Synthetic data throughout; no production or personal data.</p>
+</footer>
+</main>
+</div>
