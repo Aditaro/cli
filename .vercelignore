@@ -1,0 +1,48 @@
+# This repository is a fork of the Entire CLI, a Go project. Vercel only ever
+# deploys the static showcase in public/ (see vercel.json outputDirectory).
+#
+# api/ is the load-bearing entry here: Vercel treats a top-level api/ directory
+# as serverless functions and tries to build api/checkpoint/*.go with the Go
+# runtime, which fails and takes the whole deployment with it. outputDirectory
+# does not prevent that, because function detection runs independently of the
+# build output. Excluding the directory is what stops it.
+api/
+
+# The rest of the Go tree and toolchain — never needed to serve a static page,
+# and excluding it keeps the upload small and the build unambiguous.
+cmd/
+internal/
+e2e/
+redact/
+perf/
+tools/
+scripts/
+mise-tasks/
+docs/
+*.go
+go.mod
+go.sum
+mise.toml
+.golangci.yaml
+.goreleaser*.yaml
+
+# Project code and data, unrelated to the static showcase.
+warden/
+databricks/
+migrations/
+
+# Local and CI noise.
+.entire/
+.github/
+.devcontainer/
+.claude/
+.codex/
+.cursor/
+.gemini/
+.opencode/
+.pi/
+.vscode/
+.ferrata/
+__pycache__/
+*.pyc
+.env

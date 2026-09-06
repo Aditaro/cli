@@ -1,8 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "echo 'Serving the dependency-free Warden showcase'",
+  "framework": null,
+  "installCommand": "echo 'No dependencies: the Warden showcase is static.'",
+  "buildCommand": "echo 'Serving the dependency-free Warden showcase from public/.'",
   "outputDirectory": "public",
+  "functions": {},
   "cleanUrls": true,
   "rewrites": [
     { "source": "/", "destination": "/index.html" }
