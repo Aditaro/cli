@@ -169,6 +169,25 @@ Additionally, the organizers just gave Adit the official **Final 20-minute check
 
 Update `## Done` when finished.
 
+## Now
+**Assigned: Codex — stretch goal, HARD deadline 2:45 PM IST, ~45 min on the clock. Read the safety framing before starting.**
+
+**Safety framing (read this first):** `5589cb083` (current HEAD as of this task) is a fully verified, submittable state — 19 tests passing, live demo confirmed, dashboard confirmed live, fresh-session checkpoint reconstruction proven. That SHA stays valid as a submission target no matter what happens after it. This task is a stretch goal on top of a submission that's already safe to ship. **Do not modify, refactor, or restructure anything in `warden/migrate.py`, `warden/test_migrate.py`, `warden/demo.sh`, or any existing Databricks file.** This is additive-only: new files, nothing touched that's already verified. If you're not fully done and re-verified by 2:45 PM, stop wherever you are — don't leave anything half-working, just stop, commit what's clean, and report status. We submit `5589cb083` regardless if this doesn't land cleanly in time.
+
+**Scope — exactly this, nothing more (do not build the package restructure, MCP server, cache layer, or state machine discussed earlier — there isn't time for those and they're not needed for this slice):**
+
+Build `warden/resume_report.py`, a read-only CLI: `python3 warden/resume_report.py <checkpoint_id>`. It answers "can a fresh agent/operator safely proceed with this migration?" using only already-existing, already-safe primitives — it does not invent new privacy machinery, it reuses what's already there:
+- Look up the checkpoint via the same `entire checkpoint explain <id> --short --no-pager` pattern `migrate.py` already uses, and classify it with the **existing** `classify_completeness()` (import it from `migrate.py`, don't reimplement).
+- Print: checkpoint ID, `context_completeness`, the affected table/migration if determinable from repo state, the most recent `warden.migration_log` row's status (if live creds are present — degrade gracefully if not, same pattern as everything else in this repo), and a one-line recommended next action ("proceed", "review locally — context incomplete", etc.).
+- **Critical, non-negotiable constraint:** this tool must NEVER call `.reveal()` on a `LocalOnlyText`. It never prints raw checkpoint intent. If you're tempted to show "why" beyond the completeness label, don't — that's the whole point of the boundary this session already built. Add a unit test that asserts the tool's output never contains a planted secret string from a `LocalOnlyText`-wrapped intent, mirroring the existing `test_local_only_text_fails_safe_by_default` pattern.
+- Demonstrate it once from a fresh-ish shell using a real checkpoint ID, same style as the existing fresh-session reconstruction evidence. Record the output.
+
+Write a SHORT paragraph for it in BUILDATHON.md's "Known limitations and next steps" section, framed as: this is a narrow proof of the safe-resume-report idea, not the full control-plane vision (cache/CDF/state-machine/MCP) — mention that vision in one sentence as the "credible next step," don't build it.
+
+Run the full test suite before committing (`python3 -m pytest warden/ databricks/ -q`) — if it's not still green, you're out of time, stop and report rather than pushing something broken.
+
+Update `## Done` with a clear DONE/INCOMPLETE/ABORTED status and the time you stopped, so Claude Code can make the final call fast.
+
 ## Ground rules for every agent (Claude Code, opencode, Codex)
 - Use Entire yourself while you work, not just as something the product touches: run `entire graph search` / `entire graph impact` before changing code you didn't write, and check `entire checkpoint list` if you're unsure what's already been decided.
 - Write commit messages that capture *why*, not just *what* — rejected options, assumptions, anything you'd want a fresh session to know. Your commits are checkpoints; treat them like it.
