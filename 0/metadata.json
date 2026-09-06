@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1V34N2RTS6X32YHQ1QPKQES",
+  "session_id": "01a0757c-b060-7432-b490-f0374c27d783",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T10:10:07.784280968Z",
+  "branch": "vercel-showcase",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "82bca00a008a",
+  "checkpoint_transcript_start": 2241,
+  "transcript_lines_at_start": 2241,
+  "compact_transcript_start": 296,
+  "token_usage": {
+    "input_tokens": 2045,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 349696,
+    "output_tokens": 3868,
+    "api_call_count": 4
+  },
+  "session_metrics": {
+    "turn_count": 11
+  }
+}
