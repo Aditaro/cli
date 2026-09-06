@@ -162,6 +162,20 @@ Do NOT touch `warden/migrate.py`. Update `## Done`/`## Blocked` when finished â€
   ```
   This is an environment/connectivity blocker for the live demo, not a code
   change; no fixes were made per the freeze instruction.
+- **Codex (live verification after `cc16573cc` / `1784305b7`):** Pulled latest
+  (`Already up to date.`), then ran the live demo and
+  `python3 -m pytest warden/ databricks/ -q`. The `ALTER TABLE ... ADD
+  CONSTRAINT` path failed immediately on the existing `plan='legacy'` row and
+  Warden healed `warden.demo_users` back to Delta version 51; the validation
+  SELECT was not reached. The newest `warden.migration_log` row had
+  `status=healed`, `context_completeness=complete`, and a safe note containing
+  no raw checkpoint intent. The full suite passed: `13 passed in 7.56s`.
+- **Codex (Lakeview dashboard):** Added `databricks/create_dashboard.py`, a
+  re-runnable REST client using the documented Lakeview dashboard API. It reads
+  `databricks/dashboard_queries.sql`, creates one grouped bar chart of daily
+  attempts/heals/failures, updates an existing dashboard with the same name,
+  and keeps credentials out of output. Ran it against the live workspace:
+  [Warden Migration Health](https://dbc-89334694-0d5f.cloud.databricks.com/dashboardsv3/01f1a9c471e5137fba57a227f9b91452).
 - **Noon Curveball â€” Track 1 Privacy Boundary (committed `cc16573cc`):**
   `get_latest_checkpoint()` now returns `(cp_id, intent, completeness)`, where
   `completeness` is `"complete" | "redacted" | "unavailable"` (redacted is
