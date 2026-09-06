@@ -199,6 +199,29 @@ Update `## Done` with a clear DONE/INCOMPLETE/ABORTED status and the time you st
 - `warden.demo_users` is the one migration target for the demo. Keep scope to ONE table, ONE migration, ONE validation check — this is a narrow vertical slice, not a general migration framework.
 
 ## Done
+- **Codex (stretch goal — DONE, stopped 2026-09-06 14:07 IST):** Added the
+  additive-only `warden/resume_report.py` safe-resume CLI and
+  `warden/test_resume_report.py`; no verified migration, demo, or existing
+  Databricks file was modified. The report reuses `classify_completeness()`,
+  never calls `LocalOnlyText.reveal()`, reads only safe migration-log fields,
+  and degrades cleanly without credentials. The regression test plants a secret
+  inside `LocalOnlyText` and proves it cannot appear in report output.
+  - Credential-free real-checkpoint run:
+    ```text
+    === Warden safe resume report ===
+    Checkpoint: 01M1TWS6DSGZGBRXFNTBP7TA3E
+    Context completeness: complete
+    Migration: migrations/001_add_plan_column.sql
+    Affected table: warden.demo_users
+    Latest migration log: unavailable (Databricks credentials not set)
+    Recommended next action: proceed — context complete; run migration with validation
+    ```
+  - Live run printed only safe status (`healed`, checkpoint ID, completeness,
+    timestamp) and recommended local review before retrying; it did not print
+    raw checkpoint intent or the log note.
+  - Full verification: `python3 -m pytest warden/ databricks/ -q` →
+    `21 passed in 8.69s`.
+
 - **Codex (rubric-gap evidence pass):** Strengthened `BUILDATHON.md` with an
   explicit synthetic-data provenance statement (50 reserved-domain users,
   deterministic seed, deliberate `plan='legacy'` offender, no production data)

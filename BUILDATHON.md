@@ -119,4 +119,6 @@ Free Edition, one 2X-Small SQL warehouse, one Delta table for the demo migration
 - Generalize beyond one language/stack — the checkpoint-driven intent lookup is language-agnostic by construction (it reads Entire checkpoints and Delta metadata, not application code), so the same core mechanism could sit in front of a migration pipeline written in any language.
 - Multi-migration orchestration with dependency ordering, not just one migration at a time.
 
+`python3 warden/resume_report.py <checkpoint_id>` is a narrow proof of the safe-resume-report idea: it gives a fresh operator or agent a checkpoint completeness label, migration target, safe latest-log status, and next action without exposing raw checkpoint text. A future control plane could extend that same boundary with versioned caches, Delta Change Data Feed catch-up, parallel backfills, and an optional read-only MCP surface.
+
 None of this is built today — it's the credible next step this architecture is aimed at, not a claim about what's shipped.
