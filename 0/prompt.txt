@@ -40,3 +40,20 @@ Every blocker Codex raised (45 rows, non-idempotent 002, overclaiming docs, inco
 ---
 
 dont commit anything update what you want to do into taskmd first and then i will tell you to build it accordingly and such
+
+---
+
+▎ URGENT, ~20 min. One task: live-verify the exact commit we are submitting.
+▎
+▎ We are NOT submitting handoff. The submission is branch safe-submission, SHA 2b7e88221, checked out at:
+▎ /tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/a67113eb-8bf5-4f12-a894-98e2726c95df/scratchpad/safe
+▎
+▎ That tree is the fully live-verified baseline without Phase 2 — no orchestrate.py, no health_report.py, no 002 migration, no demo_users_clean. So none of your 45-row / non-idempotency blockers apply to it.
+▎
+▎ Run, from that directory:
+▎ set -a; source /home/adit/Desktop/Coding/BTW_Buildathon/.env; set +a
+▎ bash warden/demo.sh
+▎ python3 -m pytest warden/ databricks/ -q
+▎ Confirm and paste: pre/post Delta version match, status=healed, context_completeness=complete, sanitized note with no raw intent or row values, and the pytest count (expect 21 with creds).
+▎
+▎ Do not fix, refactor, or add anything. If it fails, report the exact error and stop — we fall back to f8f9599e5. Do not touch handoff or the Phase 2 work.
