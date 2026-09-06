@@ -4,12 +4,17 @@ set -uo pipefail
 # Credentials must already be exported by the caller. Never read or print them.
 if [[ "${1:-}" == "--self-test" ]]; then
   echo "=== Warden demo self-test (no warehouse connection) ==="
+  # errexit is deliberately enabled only for this block: without it these
+  # checks are non-fatal and the block falls through to an unconditional
+  # "self-test OK", so a broken fixture still reported success.
+  set -e
   test -s migrations/001_add_plan_column.sql
   test -s migrations/001_validate.sql
   test -s warden/migrate.py
   grep -Fq "ALTER TABLE warden.demo_users" migrations/001_add_plan_column.sql
   grep -Fq "plan NOT IN" migrations/001_validate.sql
   python3 databricks/seed.py --self-test
+  set +e
   echo "self-test OK: migration, validation, and synthetic seed fixtures are present"
   exit 0
 fi
