@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS warden.migration_log (
     status STRING,
     checkpoint_id STRING,
     note STRING,
+    context_completeness STRING,
     ts TIMESTAMP
 ) USING DELTA
 """

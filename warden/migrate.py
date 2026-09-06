@@ -4,7 +4,7 @@
 Core loop: read the migration's intent from the most recent Entire checkpoint,
 run an Entire Graph impact check, apply the migration, validate it, and on
 failure roll back via Delta time-travel while explaining the failure using the
-checkpoint's recorded intent -- not just a blind revert.
+checkpoint's recorded intent locally -- not just a blind revert.
 
 Synthetic/demo data only. Requires env vars:
   DATABRICKS_SERVER_HOSTNAME, DATABRICKS_HTTP_PATH, DATABRICKS_TOKEN
@@ -32,31 +32,50 @@ def run_entire(args, timeout=30):
         return None, str(e)
 
 
+def classify_completeness(cp_id, intent):
+    """Classify how much of the checkpoint's recorded intent is actually
+    available, so nothing downstream (console reader, DB row, human) can
+    mistake partial context for complete: 'complete', 'redacted', or
+    'unavailable'. Entire's own redaction marks removed text as bare
+    "REDACTED" or "[REDACTED_<LABEL>]" (see redact.RedactedPlaceholder) --
+    that marker surviving into --short output is the signal a field was
+    stripped, not missing outright."""
+    if cp_id is None or intent is None:
+        return "unavailable"
+    if "REDACTED" in intent:
+        return "redacted"
+    return "complete"
+
+
 def get_latest_checkpoint():
-    """Returns (checkpoint_id, intent_text) for the most recent checkpoint on
-    this branch, or (None, None) if unavailable."""
+    """Returns (checkpoint_id, intent_text, completeness) for the most recent
+    checkpoint on this branch. completeness is 'unavailable' when no
+    checkpoint/intent could be obtained at all."""
     out, err = run_entire(["checkpoint", "list", "--json"])
     if out is None:
         print(f"[warden] WARNING: could not list checkpoints ({err}); proceeding without recorded intent")
-        return None, None
+        return None, None, classify_completeness(None, None)
     try:
         checkpoints = json.loads(out)
     except json.JSONDecodeError:
         print("[warden] WARNING: checkpoint list did not parse as JSON; proceeding without recorded intent")
-        return None, None
+        return None, None, classify_completeness(None, None)
     # Skip live/pending shadow-branch entries (no `agent`/`is_logs_only` field,
     # commit-SHA-shaped id) -- only trust checkpoints that are actually
     # committed, since an in-progress checkpoint's recorded intent can still
     # change and shouldn't be treated as settled evidence.
     committed = [c for c in checkpoints if c.get("is_logs_only") or c.get("agent")]
     if not committed:
-        return None, None
+        return None, None, classify_completeness(None, None)
     cp_id = committed[0]["checkpoint_id"]
     explain, err = run_entire(["checkpoint", "explain", cp_id, "--short", "--no-pager"])
     if explain is None:
         print(f"[warden] WARNING: could not explain checkpoint {cp_id} ({err})")
-        return cp_id, None
-    return cp_id, explain.strip()
+        return cp_id, None, classify_completeness(cp_id, None)
+    intent = explain.strip()
+    if not intent:
+        return cp_id, None, classify_completeness(cp_id, None)
+    return cp_id, intent, classify_completeness(cp_id, intent)
 
 
 def graph_impact(symbol):
@@ -99,13 +118,20 @@ def ensure_log_table(cur):
             status STRING,
             checkpoint_id STRING,
             note STRING,
+            context_completeness STRING,
             ts TIMESTAMP
         ) USING DELTA
         """
     )
+    # The table may already exist from before this column was added -- backfill
+    # it rather than failing every insert against an older live table.
+    try:
+        cur.execute("ALTER TABLE warden.migration_log ADD COLUMNS (context_completeness STRING)")
+    except Exception:
+        pass  # column already present
 
 
-def log_attempt(cur, migration_name, status, checkpoint_id, note):
+def log_attempt(cur, migration_name, status, checkpoint_id, note, context_completeness):
     import uuid as uuid_module
 
     ensure_log_table(cur)
@@ -115,11 +141,35 @@ def log_attempt(cur, migration_name, status, checkpoint_id, note):
     row_id = str(uuid_module.uuid4())
     cur.execute(
         """
-        INSERT INTO warden.migration_log (id, migration_name, status, checkpoint_id, note, ts)
-        VALUES (?, ?, ?, ?, ?, current_timestamp())
+        INSERT INTO warden.migration_log (id, migration_name, status, checkpoint_id, note, context_completeness, ts)
+        VALUES (?, ?, ?, ?, ?, ?, current_timestamp())
         """,
-        (row_id, migration_name, status, checkpoint_id or "", (note or "")[:4000]),
+        (row_id, migration_name, status, checkpoint_id or "", (note or "")[:4000], context_completeness),
     )
+
+
+def describe_failure(migration_path, error, table, pre_version, cp_id, intent, completeness):
+    """Build (console_text, db_note) for a failed-and-healed migration.
+
+    console_text is printed locally only and may carry the full recorded
+    intent. db_note is what reaches Databricks -- an external service outside
+    Entire's own boundary -- and must never carry the raw checkpoint intent
+    text, redacted or not: it references the checkpoint by id and completeness
+    label only."""
+    intent_for_console = intent if completeness == "complete" else "(intent is not complete; verify the checkpoint locally)"
+    console_text = (
+        f"Migration '{migration_path}' failed: {error}\n\n"
+        f"Recorded intent (checkpoint {cp_id or 'unavailable'}, context: {completeness}):\n"
+        f"{intent_for_console}\n\n"
+        f"Action taken: rolled back {table} to Delta version {pre_version}. "
+        f"The intent above is what this migration was trying to achieve -- "
+        f"use it to write a corrected migration rather than re-attempting blindly."
+    )
+    db_note = (
+        f"migration failed: {error}; rolled back {table} to Delta version {pre_version}. "
+        f"Checkpoint intent kept local-only (context: {completeness}); see operator console for detail."
+    )
+    return console_text, db_note
 
 
 def apply_migration(migration_path, table, validate_sql_path):
@@ -131,8 +181,10 @@ def apply_migration(migration_path, table, validate_sql_path):
         with open(validate_sql_path) as f:
             validate_sql = f.read().strip()
 
-    cp_id, intent = get_latest_checkpoint()
-    print(f"[warden] intent from checkpoint {cp_id or '(none)'}:\n{intent or '(unavailable)'}\n")
+    cp_id, intent, completeness = get_latest_checkpoint()
+    print(f"[warden] intent from checkpoint {cp_id or '(none)'} [context: {completeness}]:\n{intent or '(unavailable)'}\n")
+    if completeness != "complete":
+        print(f"[warden] NOTE: recorded intent is {completeness} -- treat as partial evidence, not settled fact.\n")
 
     symbol = table.split(".")[-1]
     impact = graph_impact(symbol)
@@ -157,7 +209,7 @@ def apply_migration(migration_path, table, validate_sql_path):
             print(f"[warden] validation {'passed' if offending_rows == 0 else 'FAILED'} ({offending_rows} offending row(s))")
 
         if offending_rows == 0:
-            log_attempt(cur, migration_path, "applied", cp_id, "applied cleanly, validation passed")
+            log_attempt(cur, migration_path, "applied", cp_id, "applied cleanly, validation passed", completeness)
             print("[warden] SUCCESS.")
             return 0
 
@@ -170,18 +222,16 @@ def apply_migration(migration_path, table, validate_sql_path):
             cur.execute(f"RESTORE TABLE {table} TO VERSION AS OF {pre_version}")
         except Exception as heal_error:
             # The heal itself failed -- this is the genuinely unrecoverable case.
-            # Log it as such rather than silently losing the failure.
-            log_attempt(cur, migration_path, "failed", cp_id, f"migration failed ({e}) AND rollback failed ({heal_error})")
+            # Log it as such rather than silently losing the failure. No intent
+            # text here either, so this stays external-service-safe too.
+            log_attempt(
+                cur, migration_path, "failed", cp_id,
+                f"migration failed ({e}) AND rollback failed ({heal_error})", completeness,
+            )
             raise
-        explanation = (
-            f"Migration '{migration_path}' failed: {e}\n\n"
-            f"Recorded intent (checkpoint {cp_id or 'unavailable'}):\n{intent or '(no intent recorded)'}\n\n"
-            f"Action taken: rolled back {table} to Delta version {pre_version}. "
-            f"The intent above is what this migration was trying to achieve -- "
-            f"use it to write a corrected migration rather than re-attempting blindly."
-        )
-        print(f"\n[warden] {explanation}")
-        log_attempt(cur, migration_path, "healed", cp_id, explanation)
+        console_text, db_note = describe_failure(migration_path, e, table, pre_version, cp_id, intent, completeness)
+        print(f"\n[warden] {console_text}")
+        log_attempt(cur, migration_path, "healed", cp_id, db_note, completeness)
         return 1
     finally:
         cur.close()

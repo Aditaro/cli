@@ -26,7 +26,7 @@ with sql.connect(
 }
 
 run_latest_log() {
-  SQL_QUERY='SELECT id, migration_name, status, checkpoint_id, note, ts FROM warden.migration_log ORDER BY ts DESC LIMIT 1' python3 -c '
+  SQL_QUERY='SELECT id, migration_name, status, checkpoint_id, note, context_completeness, ts FROM warden.migration_log ORDER BY ts DESC LIMIT 1' python3 -c '
 import os
 from databricks import sql
 

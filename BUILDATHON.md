@@ -31,7 +31,19 @@ IMPACT DEGENERATE: warden.demo_users has no callers, callees or type consumers
 This is the correct, honest answer: `demo_users` is a newly-introduced symbol, so it genuinely has no code dependents yet. Warden shows this evidence to the operator rather than silently skipping the check — `graph_impact()` degrades to an explicit "(graph impact unavailable: ...)" string on timeout/error instead of hiding the failure, per the guide's own warning that graph output is evidence, not fact. Final semantic diff to be captured at submission time from the last commit's `entire graph diff` / `entire graph commit`.
 
 ## Noon Curveball: what changed and how we adapted
-_(to fill in at/after 12:00)_
+The curveball invalidated the assumption that sending the full checkpoint
+explanation in `warden.migration_log.note` was useful. A checkpoint can contain
+sensitive prompts or transcripts, and Databricks is outside Entire's local
+privacy boundary.
+
+Warden now keeps complete intent local for operator-facing explanations only.
+Databricks receives a sanitized failure summary, the checkpoint ID, and a
+`context_completeness` value of `complete`, `redacted`, or `unavailable`.
+Redacted or missing context is labelled as incomplete and never presented as
+authoritative. Existing migration/healing behavior remains intact, including
+the Delta time-travel rollback. Unit tests cover complete, redacted, and
+unavailable checkpoint data and assert that raw intent is absent from the
+external log note.
 
 ## Checkpoint links and what each checkpoint proves
 - **Initial understanding** (`28dcc3fee`) — original architecture (Handoff), before the pivot.

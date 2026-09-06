@@ -1,7 +1,7 @@
 -- Warden dashboard: migration attempts vs. heals over time.
 -- Assumes warden.migration_log exists, created and populated by the Warden core
 -- CLI with columns (id BIGINT, migration_name STRING, status STRING,
--- checkpoint_id STRING, ts TIMESTAMP).
+-- checkpoint_id STRING, note STRING, context_completeness STRING, ts TIMESTAMP).
 -- Status values: 'applied' (an attempt executed), 'healed' (rolled back via
 -- Delta time travel), 'failed' (non-recoverable outcome).
 SELECT
