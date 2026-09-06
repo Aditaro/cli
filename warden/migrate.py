@@ -32,6 +32,37 @@ def run_entire(args, timeout=30):
         return None, str(e)
 
 
+class LocalOnlyText:
+    """Wraps checkpoint intent text so leaking it is a type error, not a
+    discipline problem. str()/repr()/an f-string all return a redaction
+    placeholder -- never the real text. The only way back to the real text
+    is the explicit .reveal() call, which exists at exactly the two
+    console-print sites that are genuinely local-only (apply_migration's
+    initial print, and describe_failure's console_text). A future call site
+    that forgets the external-service boundary and just interpolates this
+    object into a string headed for Databricks gets the placeholder, not a
+    leak -- the failure mode changes from "silent data exposure" to "an
+    obviously wrong string in a log row", which is what makes this a
+    structural guarantee rather than a convention enforced by review."""
+
+    _PLACEHOLDER = "<local-only text, use .reveal() explicitly>"
+
+    def __init__(self, value):
+        self._value = value
+
+    def reveal(self):
+        """The one sanctioned way to get the real text back."""
+        return self._value
+
+    def __bool__(self):
+        return bool(self._value)
+
+    def __str__(self):
+        return self._PLACEHOLDER
+
+    __repr__ = __str__
+
+
 def classify_completeness(cp_id, intent):
     """Classify how much of the checkpoint's recorded intent is actually
     available, so nothing downstream (console reader, DB row, human) can
@@ -48,34 +79,36 @@ def classify_completeness(cp_id, intent):
 
 
 def get_latest_checkpoint():
-    """Returns (checkpoint_id, intent_text, completeness) for the most recent
-    checkpoint on this branch. completeness is 'unavailable' when no
-    checkpoint/intent could be obtained at all."""
+    """Returns (checkpoint_id, LocalOnlyText(intent_text), completeness) for
+    the most recent checkpoint on this branch. completeness is 'unavailable'
+    when no checkpoint/intent could be obtained at all. Intent is always
+    wrapped, including the None cases, so every caller gets the same type
+    back and the fail-safe default applies uniformly."""
     out, err = run_entire(["checkpoint", "list", "--json"])
     if out is None:
         print(f"[warden] WARNING: could not list checkpoints ({err}); proceeding without recorded intent")
-        return None, None, classify_completeness(None, None)
+        return None, LocalOnlyText(None), classify_completeness(None, None)
     try:
         checkpoints = json.loads(out)
     except json.JSONDecodeError:
         print("[warden] WARNING: checkpoint list did not parse as JSON; proceeding without recorded intent")
-        return None, None, classify_completeness(None, None)
+        return None, LocalOnlyText(None), classify_completeness(None, None)
     # Skip live/pending shadow-branch entries (no `agent`/`is_logs_only` field,
     # commit-SHA-shaped id) -- only trust checkpoints that are actually
     # committed, since an in-progress checkpoint's recorded intent can still
     # change and shouldn't be treated as settled evidence.
     committed = [c for c in checkpoints if c.get("is_logs_only") or c.get("agent")]
     if not committed:
-        return None, None, classify_completeness(None, None)
+        return None, LocalOnlyText(None), classify_completeness(None, None)
     cp_id = committed[0]["checkpoint_id"]
     explain, err = run_entire(["checkpoint", "explain", cp_id, "--short", "--no-pager"])
     if explain is None:
         print(f"[warden] WARNING: could not explain checkpoint {cp_id} ({err})")
-        return cp_id, None, classify_completeness(cp_id, None)
+        return cp_id, LocalOnlyText(None), classify_completeness(cp_id, None)
     intent = explain.strip()
     if not intent:
-        return cp_id, None, classify_completeness(cp_id, None)
-    return cp_id, intent, classify_completeness(cp_id, intent)
+        return cp_id, LocalOnlyText(None), classify_completeness(cp_id, None)
+    return cp_id, LocalOnlyText(intent), classify_completeness(cp_id, intent)
 
 
 def graph_impact(symbol):
@@ -148,15 +181,34 @@ def log_attempt(cur, migration_name, status, checkpoint_id, note, context_comple
     )
 
 
+def error_summary(error):
+    """Reduce an exception to its type name only, for anything that reaches
+    an external service. A DB engine's own error text is not safe to forward
+    verbatim: Delta's own CHECK-constraint violation message
+    (DELTA_VIOLATE_CONSTRAINT_WITH_VALUES) embeds the offending row's actual
+    column values, so `str(error)` can carry table data through the exact
+    same door the checkpoint-intent boundary closes for intent text. The
+    full message is still available locally via console_text/print -- this
+    function only governs what crosses the external-service boundary."""
+    return type(error).__name__
+
+
 def describe_failure(migration_path, error, table, pre_version, cp_id, intent, completeness):
     """Build (console_text, db_note) for a failed-and-healed migration.
 
-    console_text is printed locally only and may carry the full recorded
-    intent. db_note is what reaches Databricks -- an external service outside
-    Entire's own boundary -- and must never carry the raw checkpoint intent
-    text, redacted or not: it references the checkpoint by id and completeness
-    label only."""
-    intent_for_console = intent if completeness == "complete" else "(intent is not complete; verify the checkpoint locally)"
+    `intent` is a LocalOnlyText -- .reveal() is called here exactly once,
+    for console_text, which is printed locally only and may carry the full
+    recorded intent and the full exception text. db_note is what reaches
+    Databricks -- an external service outside Entire's own boundary -- and
+    must never carry the raw checkpoint intent text (redacted or not) or the
+    raw exception text: both are reduced to safe labels (completeness /
+    error_summary), with the checkpoint id and console as the pointer to
+    full detail. db_note never touches `intent` at all, so even if that
+    changed, the LocalOnlyText wrapper still fails safe by default."""
+    intent_for_console = (
+        intent.reveal() if (completeness == "complete" and intent)
+        else "(intent is not complete; verify the checkpoint locally)"
+    )
     console_text = (
         f"Migration '{migration_path}' failed: {error}\n\n"
         f"Recorded intent (checkpoint {cp_id or 'unavailable'}, context: {completeness}):\n"
@@ -166,8 +218,9 @@ def describe_failure(migration_path, error, table, pre_version, cp_id, intent, c
         f"use it to write a corrected migration rather than re-attempting blindly."
     )
     db_note = (
-        f"migration failed: {error}; rolled back {table} to Delta version {pre_version}. "
-        f"Checkpoint intent kept local-only (context: {completeness}); see operator console for detail."
+        f"migration failed ({error_summary(error)}); rolled back {table} to Delta version {pre_version}. "
+        f"Checkpoint intent and full error detail kept local-only (context: {completeness}); "
+        f"see operator console for detail."
     )
     return console_text, db_note
 
@@ -182,7 +235,10 @@ def apply_migration(migration_path, table, validate_sql_path):
             validate_sql = f.read().strip()
 
     cp_id, intent, completeness = get_latest_checkpoint()
-    print(f"[warden] intent from checkpoint {cp_id or '(none)'} [context: {completeness}]:\n{intent or '(unavailable)'}\n")
+    # .reveal() here is deliberate: this print is local console output, one
+    # of the two sanctioned local-only sites for LocalOnlyText (the other is
+    # describe_failure's console_text).
+    print(f"[warden] intent from checkpoint {cp_id or '(none)'} [context: {completeness}]:\n{intent.reveal() if intent else '(unavailable)'}\n")
     if completeness != "complete":
         print(f"[warden] NOTE: recorded intent is {completeness} -- treat as partial evidence, not settled fact.\n")
 
@@ -222,11 +278,17 @@ def apply_migration(migration_path, table, validate_sql_path):
             cur.execute(f"RESTORE TABLE {table} TO VERSION AS OF {pre_version}")
         except Exception as heal_error:
             # The heal itself failed -- this is the genuinely unrecoverable case.
-            # Log it as such rather than silently losing the failure. No intent
-            # text here either, so this stays external-service-safe too.
+            # Log it as such rather than silently losing the failure. Same
+            # error_summary reduction as describe_failure -- raw exception
+            # text can carry table data (see error_summary's docstring), so
+            # neither exception's message crosses the external-service
+            # boundary here either.
+            print(f"[warden] HEAL FAILED: {heal_error}")
             log_attempt(
                 cur, migration_path, "failed", cp_id,
-                f"migration failed ({e}) AND rollback failed ({heal_error})", completeness,
+                f"migration failed ({error_summary(e)}) AND rollback failed ({error_summary(heal_error)}); "
+                f"see operator console for detail",
+                completeness,
             )
             raise
         console_text, db_note = describe_failure(migration_path, e, table, pre_version, cp_id, intent, completeness)
