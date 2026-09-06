@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Warden: checkpoint-native, self-healing Databricks Delta migrations." />
+    <title>Warden — self-healing migrations</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main>
+      <nav>
+        <a class="brand" href="#top"><span class="brand-mark">W</span> Warden</a>
+        <div class="nav-links">
+          <a href="#flow">How it works</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#proof">Evidence</a>
+          <a class="nav-cta" href="#run">Run it</a>
+        </div>
+      </nav>
+
+      <section id="top" class="hero">
+        <div class="eyebrow"><span class="pulse"></span> CHECKPOINT-NATIVE DATABASE SAFETY</div>
+        <h1>Migration recovery<br /><em>with its reasoning intact.</em></h1>
+        <p class="lede">
+          Warden turns a failed Databricks Delta migration into a safe restore
+          plus the original engineering intent — instead of a blind revert.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#flow">Explore the live flow <span>↓</span></a>
+          <a class="button secondary" href="#run">See operator commands</a>
+        </div>
+        <div class="evidence-strip" aria-label="Verified evidence summary">
+          <div><strong>Delta 153 → 153</strong><span>live restore preserved version</span></div>
+          <div><strong>healed</strong><span>latest migration outcome</span></div>
+          <div><strong>complete</strong><span>checkpoint context label</span></div>
+          <div><strong>22 live tests</strong><span>safe baseline validation</span></div>
+        </div>
+      </section>
+
+      <section id="flow" class="section flow-section">
+        <div class="section-label">01 / THE CORE LOOP</div>
+        <div class="section-heading">
+          <h2>A failure should be<br />a <em>useful handoff.</em></h2>
+          <p>Click a stage to inspect the boundary Warden enforces.</p>
+        </div>
+        <div class="flow" role="tablist" aria-label="Warden migration stages">
+          <button class="flow-card active" data-stage="checkpoint" role="tab">
+            <span class="number">01</span><span class="icon">⌘</span>
+            <strong>Checkpoint</strong><small>Why was this attempted?</small>
+          </button>
+          <span class="connector"></span>
+          <button class="flow-card" data-stage="graph" role="tab">
+            <span class="number">02</span><span class="icon">◌</span>
+            <strong>Graph check</strong><small>What could this affect?</small>
+          </button>
+          <span class="connector"></span>
+          <button class="flow-card warning" data-stage="delta" role="tab">
+            <span class="number">03</span><span class="icon">△</span>
+            <strong>Delta validates</strong><small>Constraint catches bad data</small>
+          </button>
+          <span class="connector"></span>
+          <button class="flow-card success" data-stage="heal" role="tab">
+            <span class="number">04</span><span class="icon">↺</span>
+            <strong>Heal + explain</strong><small>Restore the prior version</small>
+          </button>
+        </div>
+        <article id="stage-detail" class="stage-detail">
+          <div class="detail-tag">CHECKPOINT INPUT</div>
+          <h3>Intent is the missing half of recovery.</h3>
+          <p>Entire Checkpoints preserve the decision context that Git diffs omit. Warden reads it locally to explain what the migration was trying to accomplish after it heals.</p>
+          <code>entire checkpoint explain &lt;checkpoint-id&gt; --short</code>
+        </article>
+      </section>
+
+      <section id="privacy" class="section boundary-section">
+        <div class="section-label">02 / NOON CURVEBALL</div>
+        <div class="section-heading wide">
+          <h2>Context is useful.<br /><em>It is not automatically shareable.</em></h2>
+          <p>The security requirement changed the architecture, not merely the copy.</p>
+        </div>
+        <div class="boundary-grid">
+          <article class="boundary local">
+            <div class="boundary-head"><span>LOCAL OPERATOR</span><span class="lock">⌂</span></div>
+            <h3>Full checkpoint intent</h3>
+            <p>Available only in the local failure explanation to help the engineer correct the migration.</p>
+            <div class="code-fade">Recorded intent: normalize plan values before enforcing the business rule…</div>
+          </article>
+          <div class="boundary-arrow" aria-hidden="true">→<small>explicitly reduced</small></div>
+          <article class="boundary external">
+            <div class="boundary-head"><span>DATABRICKS LOG</span><span class="lock">▣</span></div>
+            <h3>Safe operational metadata</h3>
+            <p>Only status, checkpoint ID, completeness, and exception type cross the service boundary.</p>
+            <div class="safe-row"><span>status</span><b>healed</b></div>
+            <div class="safe-row"><span>context</span><b>complete</b></div>
+            <div class="safe-row"><span>note</span><b>ServerOperationError</b></div>
+          </article>
+        </div>
+        <p class="boundary-note">A structural <code>LocalOnlyText</code> wrapper redacts accidental string interpolation. Redacted or unavailable context is labelled incomplete — never presented as authoritative.</p>
+      </section>
+
+      <section id="proof" class="section proof-section">
+        <div class="section-label">03 / PROOF, NOT PROMISES</div>
+        <div class="proof-grid">
+          <article class="metric-card">
+            <span class="metric">21</span><span class="metric-label">live Python tests passed</span>
+            <p>Real warehouse integration checks run when credentials are present.</p>
+          </article>
+          <article class="metric-card">
+            <span class="metric">0</span><span class="metric-label">raw intent values in the log</span>
+            <p>Unit tests plant secrets and prove external-safe outputs omit them.</p>
+          </article>
+          <article class="metric-card">
+            <span class="metric">1</span><span class="metric-label">Lakeview dashboard</span>
+            <p>Migration attempts and heals are visualized in the workspace.</p>
+          </article>
+        </div>
+        <a class="dashboard-link" href="https://dbc-89334694-0d5f.cloud.databricks.com/dashboardsv3/01f1a9c471e5137fba57a227f9b91452" target="_blank" rel="noreferrer">
+          <span class="dashboard-icon">↗</span>
+          <span><small>LIVE DATABRICKS ARTIFACT</small><strong>Open Warden Migration Health dashboard</strong></span>
+          <span class="link-arrow">→</span>
+        </a>
+      </section>
+
+      <section id="run" class="section run-section">
+        <div class="run-copy">
+          <div class="section-label">04 / RUN IT</div>
+          <h2>One calm checklist<br />before the risky command.</h2>
+          <p>The preflight keeps the local checkpoint system and Databricks warehouse from becoming separate setup mysteries.</p>
+        </div>
+        <div class="terminal" aria-label="Example Warden commands">
+          <div class="terminal-bar"><span></span><span></span><span></span><b>operator terminal</b></div>
+          <pre><code><span class="prompt">$</span> python3 -m pip install -r requirements.txt
+<span class="prompt">$</span> python3 warden/preflight.py --live
+<span class="ok">✓ Entire checkpoints: ready</span>
+<span class="ok">✓ Databricks: ready</span>
+<span class="prompt">$</span> bash warden/demo.sh
+<span class="muted">… migration fails validation → Delta restores safely</span></code></pre>
+        </div>
+      </section>
+
+      <footer>
+        <span class="brand"><span class="brand-mark">W</span> Warden</span>
+        <span>Built for Entire Buildathon · Track 1 + Databricks</span>
+        <a href="https://github.com/aditaro/cli" target="_blank" rel="noreferrer">View source ↗</a>
+      </footer>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
