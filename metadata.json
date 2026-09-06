@@ -1,0 +1,24 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1V1J17A2N2FZFAV0JSQT45Q",
+  "strategy": "manual-commit",
+  "branch": "vercel-showcase",
+  "checkpoints_count": 1,
+  "files_touched": null,
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 9904,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 284160,
+    "output_tokens": 512,
+    "api_call_count": 2
+  }
+}
