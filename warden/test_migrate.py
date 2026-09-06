@@ -303,3 +303,39 @@ def test_apply_migration_keeps_privacy_boundary_when_the_heal_itself_fails(tmp_p
     assert "RuntimeError" in note
     assert "SENSITIVE_VALUE" not in note, "RESTORE error text must not cross the external boundary"
     assert "SECRET_INTENT_MARKER" not in note, "checkpoint intent must not cross the external boundary"
+
+
+def test_get_latest_checkpoint_pins_the_requested_checkpoint():
+    """A migration's reasoning lives in the checkpoint that authored it, not
+    necessarily the newest one on the branch. Pinning must read exactly the
+    requested checkpoint and must not consult the listing at all -- otherwise
+    unrelated later work could supply the intent explaining a failure, which
+    is worse than no intent: it is confidently wrong."""
+    calls = []
+
+    def fake_subprocess_run(cmd, **kwargs):
+        calls.append(cmd[:3])
+        if cmd[:3] == ["entire", "checkpoint", "explain"]:
+            assert cmd[3] == "01PINNED000000000000000000", "must explain the pinned id"
+            return _fake_run(stdout="## Intent\nnormalize plan values before enforcing the rule")
+        raise AssertionError(f"unexpected command {cmd}")
+
+    with patch("subprocess.run", side_effect=fake_subprocess_run):
+        cp_id, intent, completeness = get_latest_checkpoint("01PINNED000000000000000000")
+
+    assert cp_id == "01PINNED000000000000000000"
+    assert "normalize plan values" in intent.reveal()
+    assert completeness == "complete"
+    assert ["entire", "checkpoint", "list"] not in calls, "pinning must not fall back to the listing"
+
+
+def test_pinned_checkpoint_gets_the_same_redaction_treatment():
+    """A pinned checkpoint must not be trusted more than a discovered one:
+    the same completeness classification and the same local-only wrapper."""
+    with patch("subprocess.run",
+               return_value=_fake_run(stdout="## Intent\ncontact [REDACTED_EMAIL] before retrying")):
+        cp_id, intent, completeness = get_latest_checkpoint("01PINNED000000000000000000")
+
+    assert completeness == "redacted"
+    assert isinstance(intent, LocalOnlyText)
+    assert "REDACTED_EMAIL" not in str(intent)

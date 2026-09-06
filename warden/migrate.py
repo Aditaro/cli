@@ -82,12 +82,38 @@ def classify_completeness(cp_id, intent):
     return "complete"
 
 
-def get_latest_checkpoint():
-    """Returns (checkpoint_id, LocalOnlyText(intent_text), completeness) for
-    the most recent checkpoint on this branch. completeness is 'unavailable'
-    when no checkpoint/intent could be obtained at all. Intent is always
-    wrapped, including the None cases, so every caller gets the same type
-    back and the fail-safe default applies uniformly."""
+def explain_checkpoint(cp_id):
+    """Fetch one checkpoint's recorded intent by id, wrapped local-only.
+
+    Shared by the pinned and latest paths so both classify completeness
+    and wrap intent identically -- a pinned checkpoint gets no weaker
+    treatment than a discovered one."""
+    explain, err = run_entire(["checkpoint", "explain", cp_id, "--short", "--no-pager"])
+    if explain is None:
+        print(f"[warden] WARNING: could not explain checkpoint {cp_id} ({err})")
+        return cp_id, LocalOnlyText(None), classify_completeness(cp_id, None)
+    intent = explain.strip()
+    if not intent:
+        return cp_id, LocalOnlyText(None), classify_completeness(cp_id, None)
+    return cp_id, LocalOnlyText(intent), classify_completeness(cp_id, intent)
+
+
+def get_latest_checkpoint(checkpoint_id=None):
+    """Returns (checkpoint_id, LocalOnlyText(intent_text), completeness).
+
+    With `checkpoint_id`, reads that checkpoint. Pinning matters because a
+    migration's reasoning lives in the checkpoint that *authored* it, which
+    is not necessarily the newest one on the branch -- any unrelated work
+    committed afterwards would otherwise supply the intent explaining a
+    failure, which is worse than having none: it is confidently wrong.
+
+    Without it, falls back to the most recent committed checkpoint.
+    completeness is 'unavailable' when no checkpoint/intent could be
+    obtained at all. Intent is always wrapped, including the None cases, so
+    every caller gets the same type back and the fail-safe default applies
+    uniformly."""
+    if checkpoint_id:
+        return explain_checkpoint(checkpoint_id)
     out, err = run_entire(["checkpoint", "list", "--json"])
     if out is None:
         print(f"[warden] WARNING: could not list checkpoints ({err}); proceeding without recorded intent")
@@ -104,15 +130,7 @@ def get_latest_checkpoint():
     committed = [c for c in checkpoints if c.get("is_logs_only") or c.get("agent")]
     if not committed:
         return None, LocalOnlyText(None), classify_completeness(None, None)
-    cp_id = committed[0]["checkpoint_id"]
-    explain, err = run_entire(["checkpoint", "explain", cp_id, "--short", "--no-pager"])
-    if explain is None:
-        print(f"[warden] WARNING: could not explain checkpoint {cp_id} ({err})")
-        return cp_id, LocalOnlyText(None), classify_completeness(cp_id, None)
-    intent = explain.strip()
-    if not intent:
-        return cp_id, LocalOnlyText(None), classify_completeness(cp_id, None)
-    return cp_id, LocalOnlyText(intent), classify_completeness(cp_id, intent)
+    return explain_checkpoint(committed[0]["checkpoint_id"])
 
 
 def graph_impact(symbol):
@@ -243,7 +261,7 @@ def describe_failure(migration_path, error, table, pre_version, cp_id, intent, c
     return console_text, db_note
 
 
-def apply_migration(migration_path, table, validate_sql_path):
+def apply_migration(migration_path, table, validate_sql_path, checkpoint_id=None):
     with open(migration_path) as f:
         migration_sql = f.read()
 
@@ -252,7 +270,7 @@ def apply_migration(migration_path, table, validate_sql_path):
         with open(validate_sql_path) as f:
             validate_sql = f.read().strip()
 
-    cp_id, intent, completeness = get_latest_checkpoint()
+    cp_id, intent, completeness = get_latest_checkpoint(checkpoint_id)
     # .reveal() here is deliberate: this print is local console output, one
     # of the two sanctioned local-only sites for LocalOnlyText (the other is
     # describe_failure's console_text).
@@ -339,9 +357,16 @@ def main():
     parser.add_argument("migration", help="path to the migration .sql file")
     parser.add_argument("--table", default="warden.demo_users", help="target Delta table")
     parser.add_argument("--validate-sql", help="path to a SQL file returning offending rows (0 rows = pass)")
+    parser.add_argument(
+        "--checkpoint",
+        help="checkpoint id whose recorded intent explains THIS migration. "
+             "Defaults to the most recent committed checkpoint, which is only "
+             "the right one when nothing unrelated was committed after the "
+             "migration was written.",
+    )
     args = parser.parse_args()
 
-    sys.exit(apply_migration(args.migration, args.table, args.validate_sql))
+    sys.exit(apply_migration(args.migration, args.table, args.validate_sql, args.checkpoint))
 
 
 if __name__ == "__main__":
