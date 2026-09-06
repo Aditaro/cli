@@ -176,6 +176,82 @@ Do NOT touch `warden/migrate.py`. Update `## Done`/`## Blocked` when finished �
   attempts/heals/failures, updates an existing dashboard with the same name,
   and keeps credentials out of output. Ran it against the live workspace:
   [Warden Migration Health](https://dbc-89334694-0d5f.cloud.databricks.com/dashboardsv3/01f1a9c471e5137fba57a227f9b91452).
+- **Codex (final stable-state verification):** Ran the live demo and full test
+  suite without fixing anything. Complete captured output:
+  ```text
+  === Pre-migration Delta version ===
+  Delta version: 51
+  === Apply migration and validate (healing on failure) ===
+  [warden] intent from checkpoint 01M1TSYZ5VC1828RZAC7ZHWP2S [context: complete]:
+  ● Checkpoint 01M1TSYZ5VC1828RZAC7ZHWP2S
+    session  a67113eb-8bf5-4f12-a894-98e2726c95df
+    created  2026-09-06 07:29:47
+    author   Adit Potta <27315597+Aditaro@users.noreply.github.com>
+    tokens   1368.9k
+    commits  7274590 databricks: add Lakeview dashboard creation script (Codex)
+  ────────────────────────────────────────────────────────────
+  ## Intent
+
+  /code-review
+
+  ## Summary
+
+  *Not generated yet. Run ‘entire checkpoint explain --generate 01M1TSYZ5VC1828RZAC7ZHWP2S‘ to create an AI summary.*
+
+  [warden] Entire Graph impact on 'demo_users' (evidence, not fact -- verify before trusting):
+  Index: cache-miss (28778ms) | Query: 31ms | Total: 28809ms
+  Completeness: no parse failures in SQL (4 files parsed); 1 elsewhere (JSON 1) cannot affect this answer — see --format json.
+  IMPACT DEGENERATE: warden.demo_users has no callers, callees or type consumers
+
+  [warden] 'warden.demo_users' currently at Delta version 51
+  [warden] FAILURE: [DELTA_NEW_CHECK_CONSTRAINT_VIOLATION] 1 rows in workspace.warden.demo_users violate the new CHECK constraint (plan IN ('free', 'pro', 'enterprise')).
+  [warden] healing: restoring 'warden.demo_users' to Delta version 51 via time-travel...
+
+  [warden] Migration 'migrations/001_add_plan_column.sql' failed: [DELTA_NEW_CHECK_CONSTRAINT_VIOLATION] 1 rows in workspace.warden.demo_users violate the new CHECK constraint (plan IN ('free', 'pro', 'enterprise')).
+
+  Recorded intent (checkpoint 01M1TSYZ5VC1828RZAC7ZHWP2S, context: complete):
+  ● Checkpoint 01M1TSYZ5VC1828RZAC7ZHWP2S
+    session  a67113eb-8bf5-4f12-a894-98e2726c95df
+    created  2026-09-06 07:29:47
+    author   Adit Potta <27315597+Aditaro@users.noreply.github.com>
+    tokens   1368.9k
+    commits  7274590 databricks: add Lakeview dashboard creation script (Codex)
+  ────────────────────────────────────────────────────────────
+  ## Intent
+
+  /code-review
+
+  ## Summary
+
+  *Not generated yet. Run ‘entire checkpoint explain --generate 01M1TSYZ5VC1828RZAC7ZHWP2S‘ to create an AI summary.*
+
+  Action taken: rolled back warden.demo_users to Delta version 51. The intent above is what this migration was trying to achieve -- use it to write a corrected migration rather than re-attempting blindly.
+  === Most recent migration log row ===
+  id | migration_name | status | checkpoint_id | note | context_completeness | ts
+  4822c20b-2943-4f22-ba00-34bc6dd58440 | migrations/001_add_plan_column.sql | healed | 01M1TSYZ5VC1828RZAC7ZHWP2S | migration failed (ServerOperationError); rolled back warden.demo_users to Delta version 51. Checkpoint intent and full error detail kept local-only (context: complete); see operator console for detail. | complete | 2026-09-06 07:33:08.939138+00:00
+  === Post-migration Delta version ===
+  Delta version: 51
+  Demo completed: validation failed and Warden healed the table.
+
+  === pytest: python3 -m pytest warden/ databricks/ -q ===
+  ................                                                         [100%]
+  16 passed in 7.03s
+
+  === verification exit codes: demo=0 pytest=0 ===
+  ```
+- **Codex (migration hardening):** Fixed the two requested real bugs in
+  `warden/migrate.py` and tightened redaction-marker detection:
+  - `ensure_log_table()` now ignores only Databricks duplicate-column
+    diagnostics and propagates permission/connectivity/other ALTER failures.
+  - `apply_migration()` initializes `pre_version` before the main `try`; if the
+    version lookup fails, it skips rollback, records a hard `failed` attempt when
+    possible, and reports that no safe restore version is available.
+  - `classify_completeness()` now matches bare `REDACTED` or bracketed
+    `[REDACTED_<LABEL>]` markers without treating strings such as
+    `REDACTED_EMAILS` as redacted.
+  - Added regression tests for all three cases.
+  - Full verification: `python3 -m pytest warden/ databricks/ -q` →
+    `16 passed, 3 skipped in 0.12s`.
 - **Noon Curveball — Track 1 Privacy Boundary (committed `cc16573cc`):**
   `get_latest_checkpoint()` now returns `(cp_id, intent, completeness)`, where
   `completeness` is `"complete" | "redacted" | "unavailable"` (redacted is

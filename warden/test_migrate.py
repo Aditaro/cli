@@ -8,12 +8,16 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent))
 from migrate import (  # noqa: E402
     LocalOnlyText,
+    apply_migration,
     classify_completeness,
     describe_failure,
     error_summary,
+    ensure_log_table,
     get_latest_checkpoint,
     graph_impact,
     run_entire,
@@ -88,6 +92,68 @@ def test_classify_completeness():
     assert classify_completeness("cp1", "plain intent text") == "complete"
     assert classify_completeness("cp1", "touched the REDACTED field") == "redacted"
     assert classify_completeness("cp1", "[REDACTED_EMAIL] signed up") == "redacted"
+    assert classify_completeness("cp1", "documented REDACTED_EMAILS behavior") == "complete"
+
+
+class _SchemaCursor:
+    def __init__(self, alter_error=None):
+        self.statements = []
+        self.alter_error = alter_error
+
+    def execute(self, statement, *args):
+        self.statements.append(statement)
+        if self.alter_error and "ALTER TABLE" in statement:
+            raise self.alter_error
+
+
+def test_ensure_log_table_propagates_non_duplicate_alter_errors():
+    cursor = _SchemaCursor(RuntimeError("permission denied"))
+    with pytest.raises(RuntimeError, match="permission denied"):
+        ensure_log_table(cursor)
+
+
+def test_ensure_log_table_ignores_duplicate_column_error():
+    cursor = _SchemaCursor(RuntimeError("[COLUMN_ALREADY_EXISTS] context_completeness already exists"))
+    ensure_log_table(cursor)
+
+
+def test_apply_migration_logs_hard_failure_when_version_lookup_fails(tmp_path):
+    migration = tmp_path / "migration.sql"
+    migration.write_text("ALTER TABLE warden.demo_users ADD COLUMNS (new_col STRING)")
+
+    class Cursor:
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, statement, *args):
+            self.executed.append(statement)
+
+        def close(self):
+            pass
+
+    class Connection:
+        def __init__(self, cursor):
+            self._cursor = cursor
+
+        def cursor(self):
+            return self._cursor
+
+        def close(self):
+            pass
+
+    cursor = Cursor()
+    logged = []
+    with patch("migrate.get_latest_checkpoint", return_value=("cp1", LocalOnlyText(None), "unavailable")), \
+         patch("migrate.graph_impact", return_value="impact"), \
+         patch("migrate.connect", return_value=Connection(cursor)), \
+         patch("migrate.current_delta_version", side_effect=RuntimeError("table unavailable")), \
+         patch("migrate.log_attempt", side_effect=lambda *args: logged.append(args)):
+        result = apply_migration(str(migration), "warden.demo_users", None)
+
+    assert result == 1
+    assert not any("RESTORE TABLE" in statement for statement in cursor.executed)
+    assert logged[0][2] == "failed"
+    assert "pre-migration Delta version was unavailable" in logged[0][4]
 
 
 def test_describe_failure_never_leaks_raw_intent_to_db_note():

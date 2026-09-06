@@ -12,6 +12,7 @@ Synthetic/demo data only. Requires env vars:
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -63,6 +64,9 @@ class LocalOnlyText:
     __repr__ = __str__
 
 
+REDACTED_MARKER_RE = re.compile(r"\bREDACTED\b|\[REDACTED_[A-Z_]+\]")
+
+
 def classify_completeness(cp_id, intent):
     """Classify how much of the checkpoint's recorded intent is actually
     available, so nothing downstream (console reader, DB row, human) can
@@ -73,7 +77,7 @@ def classify_completeness(cp_id, intent):
     stripped, not missing outright."""
     if cp_id is None or intent is None:
         return "unavailable"
-    if "REDACTED" in intent:
+    if REDACTED_MARKER_RE.search(intent):
         return "redacted"
     return "complete"
 
@@ -160,8 +164,17 @@ def ensure_log_table(cur):
     # it rather than failing every insert against an older live table.
     try:
         cur.execute("ALTER TABLE warden.migration_log ADD COLUMNS (context_completeness STRING)")
-    except Exception:
-        pass  # column already present
+    except Exception as error:
+        # Databricks does not expose a portable duplicate-column exception in
+        # the DB-API layer. Match its specific duplicate-column diagnostic,
+        # but propagate permission, connectivity, and other ALTER failures.
+        error_text = str(error).upper()
+        duplicate_column = (
+            "COLUMN_ALREADY_EXISTS" in error_text
+            or "CONTEXT_COMPLETENESS" in error_text and "ALREADY EXISTS" in error_text
+        )
+        if not duplicate_column:
+            raise
 
 
 def log_attempt(cur, migration_name, status, checkpoint_id, note, context_completeness):
@@ -184,10 +197,15 @@ def log_attempt(cur, migration_name, status, checkpoint_id, note, context_comple
 def error_summary(error):
     """Reduce an exception to its type name only, for anything that reaches
     an external service. A DB engine's own error text is not safe to forward
-    verbatim: Delta's own CHECK-constraint violation message
-    (DELTA_VIOLATE_CONSTRAINT_WITH_VALUES) embeds the offending row's actual
-    column values, so `str(error)` can carry table data through the exact
-    same door the checkpoint-intent boundary closes for intent text. The
+    verbatim: some of Delta's own constraint-violation messages
+    (DELTA_VIOLATE_CONSTRAINT_WITH_VALUES, raised on an INSERT/UPDATE against
+    an existing constraint) embed the offending row's actual column values,
+    so `str(error)` can carry table data through the exact same door the
+    checkpoint-intent boundary closes for intent text. (This demo's own
+    failure mode -- ADD CONSTRAINT validating pre-existing data -- raises
+    DELTA_NEW_CHECK_CONSTRAINT_VIOLATION instead, which reports only a row
+    count; this guard covers the value-embedding case generally, not just
+    what this specific migration happens to trigger.) The
     full message is still available locally via console_text/print -- this
     function only governs what crosses the external-service boundary."""
     return type(error).__name__
@@ -248,6 +266,7 @@ def apply_migration(migration_path, table, validate_sql_path):
 
     conn = connect()
     cur = conn.cursor()
+    pre_version = None
     try:
         pre_version = current_delta_version(cur, table)
         print(f"[warden] '{table}' currently at Delta version {pre_version}")
@@ -273,6 +292,21 @@ def apply_migration(migration_path, table, validate_sql_path):
 
     except Exception as e:
         print(f"[warden] FAILURE: {e}")
+        if pre_version is None:
+            print(
+                "[warden] HEAL SKIPPED: pre-migration Delta version is unavailable; "
+                "cannot safely restore the table."
+            )
+            try:
+                log_attempt(
+                    cur, migration_path, "failed", cp_id,
+                    f"migration failed ({error_summary(e)}); rollback skipped because "
+                    "the pre-migration Delta version was unavailable; see operator console for detail",
+                    completeness,
+                )
+            except Exception as log_error:
+                print(f"[warden] LOG FAILED: {log_error}")
+            return 1
         print(f"[warden] healing: restoring '{table}' to Delta version {pre_version} via time-travel...")
         try:
             cur.execute(f"RESTORE TABLE {table} TO VERSION AS OF {pre_version}")
