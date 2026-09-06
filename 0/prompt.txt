@@ -1,0 +1,404 @@
+o run `python3 -m pytest warden/ databricks/ -q` (all tests, both dirs). Report
+the FULL real output (not a summary) in `## Done` below — pass/fail counts, and the actu
+al demo.sh output showing pre/post Delta version + the logged row. If anything fails, re
+port the exact error — don't fix it yourself, just report it clearly so Claude Code can
+triage fast given the time left. This is the verification evidence for the required 11:4
+5 stable-state checkpoint, so accuracy matters more than speed here.
+
+
+CK` constraint (`ALTER TABLE ... ADD CONSTRAINT ... CHECK (plan IN (...))`), and
+ Delta validates *existing* data at `ADD CONSTRAINT` time. Against the live warehouse, t
+hat ALTER TABLE step itself throws on the seeded offending row (`plan='legacy'`) — the s
+eparate `001_validate.sql` SELECT step (d above) is never reached in practice for this p
+articular migration, because Delta's own constraint mechanism is stricter and catches th
+e problem first. Warden's healing logic (step e) is correctly written to catch a failure
+ from *either* source — the ALTER TABLE or the validation SELECT — since not every migra
+tion will use a Delta `CHECK` constraint the way this demo does; this one just happens t
+o fail at the earlier point. This was confirmed by a real run, not inferred: see the Che
+ated via `TASKS.md`.
+
+## Entire Graph findings and verification
+
+Now update the Databricks section to reference the real dashboard link, and the checkpoint links section to add the verification/dashboard commits:
+
+● Update(BUILDATHON.md)
+Added 1 line, removed 1 line
+```
+
+## Databricks use, data sources and limitations
+Free Edition, one 2X-Small SQL warehouse, one Delta table for the demo migration target
+, synthetic/clearly-labeled seed data only. Delta time-travel is the rollback mechanism
+ — this is why Databricks is essential, not incidental.
+Free Edition, one 2X-Small SQL warehouse, one Delta table for the demo migration target
+, synthetic/clearly-labeled seed data only. Delta time-travel (`RESTORE TABLE ... TO VE
+RSION AS OF`) is the rollback mechanism, and Delta's own `CHECK` constraint enforcement
+ is what actually catches the demo's seeded bad row — both are load-bearing, not decora
+tive. Migration attempts/heals are visualized in a real Lakeview dashboard object in th
+e workspace (created via `databricks/create_dashboard.py` against the Lakeview REST API
+
+
+● Update(BUILDATHON.md)
+Added 3 lines, removed 1 line
+- **Multi-agent build** (`11525915f`, `8e089315f`) — opencode's Databricks infra, Codex'
+s migration scenario, each with their own `Entire-Checkpoint` trailer.
+- **Real bugs found and fixed against the live warehouse** (`874f4a0e7`) — proves the lo
+op was actually run, not just written: `uuid()` inline-table bug, graph impact profile/t
+imeout fix.
+- **Demo runner** (`50ffe776c`) — one-command live demo flow.
+- **Pre-noon stable state** — this commit. See below for the required intent/architectur
+e/risk summary.
+- **Pre-noon stable state** (`b8c9fe619`) — required intent/architecture/risk summary be
+fore the curveball.
+- **Privacy boundary + hardening** (`cc16573cc`, `1784305b7`) — the curveball fix (`cont
+ext_completeness`, local-only intent) plus a same-session follow-up that closed a second
+ leak of the same shape (raw DB exception text reduced to its type name before crossing
+the external boundary) and made the intent boundary structural (`LocalOnlyText`) rather
+than convention-only.
+- **Post-curveball live verification + Lakeview dashboard** (`7274590b7`) — Codex confir
+med live which failure path actually fires (Delta's `ADD CONSTRAINT` validation, not the
+ manual SELECT — see Architecture) and shipped a real dashboard object via the Lakeview
+API.
+
+## Setup, run and test instructions
+```
+, removed 1 line
+
+**Already true today, not aspirational:**
+- **No secrets ever touch the repo or an external service.** `DATABRICKS_SERVER_HOSTNAME
+`/`HTTP_PATH`/`TOKEN` are read from env vars only (`warden/migrate.py::connect()`), sour
+ced from a gitignored `.env`; the connector fails closed with a clear error if any are m
+issing, and nothing in the codebase reads or prints `.env` itself.
+- **Checkpoint intent has a hard local/external boundary** (today's curveball work): the
+ full recorded intent is only ever printed to the operator's own console. What reaches D
+atabricks — an external service outside Entire's own trust boundary — is a sanitized sum
+mary, the checkpoint ID, and an explicit `context_completeness` label (`complete`/`redac
+ted`/`unavailable`), so a partially-redacted checkpoint can never be mistaken for author
+itative context downstream.
+- **Checkpoint intent has a hard, structurally-enforced local/external boundary** (curve
+ball work, hardened same-session): recorded intent is wrapped in `LocalOnlyText`, whose
+default `str()`/`repr()` return a redaction placeholder rather than the real text — the
+real text is reachable only through one explicit `.reveal()` call, at the two genuinely
+local-only console-print sites. A future call site that carelessly interpolates the wrap
+per into a string bound for Databricks gets the placeholder, not a leak — this is a prop
+erty of the type, not just a convention checked by review. What actually reaches Databri
+cks is a sanitized summary, the checkpoint ID, and an explicit `context_completeness` la
+bel (`complete`/`redacted`/`unavailable`), so a partially-redacted checkpoint can never
+be mistaken for authoritative context downstream.
+- **The same boundary covers database error text, not just checkpoint intent.** Reviewin
+g the curveball fix surfaced a second leak of the identical shape: Delta's own `CHECK`-c
+onstraint violation message embeds the offending row's actual column values (`DELTA_VIOL
+ATE_CONSTRAINT_WITH_VALUES`), so forwarding a raw exception's text to `migration_log` wo
+uld leak table data through a different door than the one the curveball closed. `error_s
+ummary()` reduces any exception to its type name (e.g. `ValueError`) before it crosses t
+he external-service boundary; the full message still prints locally for operator triage.
+ Confirmed live: the logged row's note contains no row values, only the type name.
+- **Warden inherits Entire's own checkpoint-security substrate**, rather than re-impleme
+nting it: transcripts are redacted before they're ever written to a checkpoint (regex +
+entropy scanners, with an optional OpenAI Privacy Filter layer), the `.entire` directory
+ refuses to operate through a symlink (so a malicious repo can't redirect where checkpoi
+nt data is read from or written to), and exec-bearing settings (like a custom redaction
+command) are only ever honored from an untracked, developer-local file — never from anyt
+hing a pull request could commit. Warden's checkpoint reads (`entire checkpoint list/exp
+lain`) sit on top of all of this for free.
+
+**Where this goes next if we had more time (credible, not built):**
+Interrupted · What should Claude
+Codex task list (do in this order)
+
+1. Commit the BUILDATHON.md correction (30 seconds, no thinking required)
+git add BUILDATHON.md
+git commit -m "docs: correct mechanism description with live-verified finding
+
+Delta's ADD CONSTRAINT validates existing data immediately, so the
+demo migration fails there, not at the separate validate-sql SELECT
+step. Corrected architecture/security/checkpoint-links sections to
+match what was actually observed live, and linked the real Lakeview
+dashboard.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+(This is just committing text I already wrote — safe to run as-is, no judgment needed from Codex.)
+
+2. Sanity-check the dashboard link still resolves
+Open https://dbc-89334694-0d5f.cloud.databricks.com/dashboardsv3/01f1a9c471e5137fba57a227f9b91452 in a browser (or curl -I it with the token) and confirm it's not 404ing before judging. If it's dead, re-run python3 databricks/create_dashboard.py.
+
+3. Full regression run, once, right before submission
+set -a; source .env; set +a
+bash warden/demo.sh
+python3 -m pytest warden/ databricks/ -q
+Paste output into TASKS.md ## Done as usual. This is the final "does everything still work" gate — do this last, close to the deadline, not now.
+
+4. (Optional, only if time remains after 1–3) Requirements manifest
+There's no requirements.txt in the repo despite databricks-sql-connector, pytest, and now requests all being used. Have Codex add one at repo root:
+databricks-sql-connector
+pytest
+requests
+Low priority — nice-to-have for judges trying to run it themselves, not required for the demo to work in your current environment.
+
+---
+
+Nothing else needs Codex right now. I'm holding off on further edits from my side until you tell me to resume — just let me know when you want me back in, or if something breaks during Codex's run.
+    assert "SECRET_INTENT_MARKER" not in accidental_leak
+    assert "SECRET_INTENT_MARKER" in secret.reveal()
+    assert bool(secret) is True
+    assert bool(LocalOnlyText(None)) is False
+
+
+def test_describe_failure_ndb_note():
+    """Delta's own CHECK-constraint violation message
+    (DELTA_VIOLATE_CONSTRAIfending row's actual
+
+● Update(warden/test_migrate.py)
+Added 1 line, removed 1 line
+    for intent, completeness in [("[REDACTED_EMAIL] wants a plan change", "redacted"),
+(None, "unavailable")]:
+        console_text, db_no
+            "migrations/001_add_plan_column.sql", RuntimeError("boom"), "warden.demo_us
+ers",
+            "3", "cp1", int
+            "3", "cp1", LocalOnlyText(intent), completeness,
+        )
+        assert completeness
+        assert completeness in console_text
+
+And the error-text test needs the sa
+
+● Update(warden/test_migrate.py)
+Added 1 line, removed 1 line
+attern
+
+Clean — classify_completeness correctly operates on the raw string before wrapping (line 111), and every other consumer either calls .reveal() explicitly or passes the wrapper through untouched. Let's commit this hardening pass now, then write Codex's task.
+
+  Committed 1784305b7, ran 1 shell command
+
+Now let's write Codex's task in TASKS.md — live verification of the failure path plus the Lakeview dashboard:
+
+  Searched for 1 pattern, read 1 file
+
+● Update(TASKS.md)
+Added 28 lines
+```
+Then also run `python3 -m pytest warden/ databricks/ -q` (all tests, both dirs). Report
+the FULL real output (not a summary) in `## Done` below — pass/fail counts, and the actu
+al demo.sh output showing pre/post Delta version + the logged row. If anything fails, re
+port the exact error — don't fix it yourself, just report it clearly so Claude Code can
+triage fast given the time left. This is the verification evidence for the required 11:4
+5 stable-state checkpoint, sspeed here.
+
+
+Report in `## Done` below, verbatim:
+1. Does the ALTER TABLE step itself throw an exception, or does it succeed and the *foll
+owing* `001_validate.sql` SELECT catch the offending row? (Look at whether `"[warden] mi
+gration '...' applied."` prints before the failure.)
+2. The exact exception type/message Databricks/Delta gives you for the CHECK constraint
+violation (paste it — we want to know if it names Delta's `DELTA_VIOLATE_CONSTRAINT_WITH
+_VALUES` error or something else).
+3. Query the most recent row in `warden.migration_log` after the run (`SELECT * FROM war
+den.migration_log ORDER BY ts DESC LIMIT 1`) and paste it. Confirm the `note` column con
+tains an exception **type name only** (e.g. `ValueError`), not a raw message with `plan
+= legacy` or similar embedded in it — this is what the just-hardened `error_summary()` i
+s supposed to guarantee.
+4. Full `python3 -m pytest warden/ databricks/ -q` output.
+
+Don't fix anything yourself even if something looks off — just report exactly what you o
+bserve, including the raw exception text/log row content, so Claude Code can correct the
+ docs and/or patch based on real evidence instead of a guess.
+
+### Task 2 — create a real Lakeview dashboard from `databricks/dashboard_queries.sql`
+
+e87
+
+Status:
+
+Codex is set up — I wrote two tasks directly into TASKS.md (c5b4f2e87), which is the pattern the whole session has used, so Codex just needs to be pointed at it (tell it: "check TASKS.md, you have a new ## Now assignment"). In order:
+1. Verify which failure path actually fires live — does the ALTER TABLE ADD CONSTRAINT itself throw (Delta validates existing data at constraint-creation time), or does the manual 001_validate.sql SELECT catch it after a clean apply? We've genuinely never observed this — the one live run stalled before getting there. This also confirms the just-hardened error_summary() really keeps raw DB error text out of the external log.
+2. Build a real Lakeview dashboard from dashboard_queries.sql via the Databricks SDK/API, so there's an actual clickable artifact instead of a stub .sql file.
+
+On "the failure thing" — already fixed, not just investigated: while writing Codex's task I found a real gap and closed it rather than just flagging it: the raw DB exception text was flowing into the external migration_log note unreduced — and Delta's own constraint-violation error message literally embeds the offending row's values, which is the exact same leak shape as the checkpoint-intent problem, through a different door. Fixed with error_summary() (reduces any exception to its type name before it crosses the external boundary; full text stays local). Committed as 1784305b7.
+
+cord the full attempt → failure → heal trail as a new Entire checkpoint.
+2. Databricks is the substrate the whole mechanic depends on: Delta Lake's native versio
+ning is the rollback primitive, and a SQL dashboard visualizes migration attempts/heals
+over time.
+   d. Run the supplied validation query as a second, independent check.
+   e. On failure at either step: `RESTORE TABLE ... TO VERSION AS OF <n>` (Delta time-tr
+avel) to roll back, then use the checkpoint's recorded intent to generate a human-readab
+le explanation of what was attempted and why it failed.
+   f. Log the attempt (applied/healed/failed) to `warden.migration_log`, with the raw ch
+eckpoint intent and full error text kept local-only (see Security).
+2. Databricks is the substrate the whole mechanic depends on: Delta Lake's native versio
+ning is the rollback primitive, and a Lakeview dashboard visualizes migration attempts/h
+eals over time.
+
+**Verified live which check actually fires (not assumed):** the demo migration adds a De
+lta `CHECK` constraint (`ALTER TABLE ... ADD CONSTRAINT ... CHECK (plan IN (...))`), and
+ Delta validates *existing* data at `ADD CONSTRAINT` time. Against the live warehouse, t
+hat ALTER TABLE step itself throws on the seeded offending row (`plan='legacy'`) — the s
+eparate `001_validate.sql` SELECT step (d above) is never reached in practice for this p
+articular migration, because Delta's own constraint mechanism is stricter and catches th
+e problem first. Warden's healing logic (step e) is correctly written to catch a failure
+ from *either* source — the  SELECT — since not every migra
+tion will use a Delta `CHECK` constraint the way this demo does; this one just happens t
+o fail at the earlier point. This was confirmed by a real run, not inferred: see the Che
+ckpoint links section.
+
+Build split: Claude Code drives the core Warden CLI and checkpoint logic; opencode/Codex
+ build the Databricks Delta table setup, synthetic seed data, and dashboard in parallel,
+ coordinated via `TASKS.md`.
+
+## Entire Graph findings and verification
+
+Now update the Databricks section to reference the real dashboard link, and the checkpoint links section to add the verification/dashboard commits:
+
+● Update(BUILDATHON.md)
+Added 1 line, removed 1 line
+```
+
+## Databricks use, data sou
+Free Edition, one 2X-Small SQL warehouse, one Delta table for the demo migration target
+, synthetic/clearly-labeled seed data only. Delta time-travel is the rollback mechanism
+ — this is why Databricks i
+pace (created via `databricks/create_dashboard.py` against the Lakeview REST API
+, not just a stub query file): [Warden Migration Health](https://dbc-89334694-0d5f.clou
+d.databricks.com/dashboardsv3/01f1a9c471e5137fba57a227f9b91452).
+
+## Known limitations and next steps
+
+
+● Update(BUILDATHON.md)
+Added 3 lines, removed 1 line
+- **Multi-agent build** (`11525915f`, `8e089315f`) — opencode's Databricks infra, Codex'
+s migration scenario, each with their own `Entire-Checkpoint` trailer.
+- **Real bugs found and fixed against the live warehouse** (`874f4a0e7`) — proves the lo
+op was actually run, not just written: `uuid()` inline-table bug, graph impact profile/t
+imeout fix.
+- **Demo runner** (`50ffe776c`) — one-command live demo flow.
+- **Pre-noon stable state** — this commit. See below for the required intent/architectur
+e/risk summary.
+- **Pre-noon stable state** (`b8c9fe619`) — required intent/architecture/risk summary be
+fore the curveball.
+- **Privacy boundary + hardening** (`cc16573cc`, `1784305b7`) — the curveball fix (`cont
+ext_completeness`, local-only intent) plus a same-session follow-up that closed a second
+ leak of the same shape (raw its type name before crossing
+the external boundary) and made the intent boundary structural (`LocalOnlyText`) rather
+than convention-only.
+- **Post-curveball live verification + Lakeview dashboard** (`7274590b7`) — Codex confir
+med live which failure path actually fires (Delta's `ADD CONSTRAINT` validation, not the
+ manual SELECT — see Architecture) and shipped a real dashboard object via the Lakeview
+API.
+
+## Setup, run and test instructions
+```
+
+Now let's also add the new "found and fixed a second leak" finding into the Security section, since it's now more accurate/complete than what I wrote before:
+
+  Read 1 file
+
+● Update(BUILDATHON.md)
+Added 2 lines, removed 1 line
+
+**Already true today, not aspirational:**
+- **No secrets ever touch the repo or an external service.** `DATABRICKS_SERVER_HOSTNAME
+`/`HTTP_PATH`/`TOKEN` are ren/migrate.py::connect()`), sour
+ced from a gitignored `.env`; the connector fails closed with a clear error if any are m
+issing, and nothing in the codebase reads or prints `.env` itself.
+- **Checkpoint intent has a hard local/external boundary** (today's curveball work): the
+ full recorded intent is only ever printed to the operator's own console. What reaches D
+atabricks — an external servt boundary — is a sanitized sum
+mary, the checkpoint ID, and an explicit `context_completeness` label (`complete`/`redac
+ted`/`unavailable`), so a paan never be mistaken for author
+itative context downstream.
+- **Checkpoint intent has a ocal/external boundary** (curve
+ball work, hardened same-session): recorded intent is wrapped in `LocalOnlyText`, whose
+default `str()`/`repr()` return a redaction placeholder rather than the real text — the
+real text is reachable only ()` call, at the two genuinely
+local-only console-print sites. A future call site that carelessly interpolates the wrap
+per into a string bound for Databricks gets the placeholder, not a leak — this is a prop
+erty of the type, not just a. What actually reaches Databri
+cks is a sanitized summary, the checkpoint ID, and an explicit `context_completeness` la
+bel (`complete`/`redacted`/`unavailable`), so a partially-redacted checkpoint can never
+be mistaken for authoritativ
+- **The same boundary covers database error text, not just checkpoint intent.** Reviewin
+g the curveball fix surfaced a second leak of the identical shape: Delta's own `CHECK`-c
+onstraint violation message tual column values (`DELTA_VIOL
+ATE_CONSTRAINT_WITH_VALUES`), so forwarding a raw exception's text to `migration_log` wo
+uld leak table data through a different door than the one the curveball closed. `error_s
+ummary()` reduces any exceptalueError`) before it crosses t
+he external-service boundary; the full message still prints locally for operator triage.
+ Confirmed live: the logged row's note contains no row values, only the type name.
+- **Warden inherits Entire'strate**, rather than re-impleme
+nting it: transcripts are redacted before they're ever written to a checkpoint (regex +
+entropy scanners, with an optional OpenAI Privacy Filter layer), the `.entire` directory
+ refuses to operate through a symlink (so a malicious repo can't redirect where checkpoi
+nt data is read from or written to), and exec-bearing settings (like a custom redaction
+command) are only ever honored from an untracked, developer-local file — never from anyt
+hing a pull request could commit. Warden's checkpoint reads (`entire checkpoint list/exp
+lain`) sit on top of all of this for free.
+
+**Where this goes next if we had more time (credible, not built):**
+Interrupted · What should Claude do instead?
+
+❯ also before you go ahead and do everything your usage is about to run out, so give a list of tasks for codex to do and i will carefully do it so that i can mange its useage
+
+  Ran 1 shell command
+
+Understood — stopping heavy work now. The BUILDATHON.md edit I was mid-way through is saved and complete (docs-correction only, no risk). Here's the Codex task list, ordered by payoff, so you can feed them one at a time and watch the budget:
+
+---
+
+Codex task list (do in this order)
+
+1. Commit the BUILDATHON.md correctiequired)
+git add BUILDATHON.md
+git commit -m "docs: correct mechanism description with live-verified finding
+
+Delta's ADD CONSTRAINT validates existing data immediately, so the
+demo migration fails there, not at the separate validate-sql SELECT
+step. Corrected architecture/security/checkpoint-links sections to
+match what was actually observed live, and linked the real Lakeview
+dashboard.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+(This is just committing text I already wrote — safe to run as-is, no judgment needed from Codex.)
+
+2. Sanity-check the dashboard link still resolves
+Open https://dbc-89334694-0d5f.cloud.databricks.com/dashboardsv3/01f1a9c471e5137fba57a227f9b91452 in a browser (or curl -I it with the token) and confirm it's not 404ing before judging. If it's dead, re-run python3 databricks/create_dashboard.py.
+
+3. Full regression run, once, right
+set -a; source .env; set +a
+bash warden/demo.sh
+python3 -m pytest warden/ databricks
+Paste output into TASKS.md ## Done as usual. This is the final "does everything still work" gate — do this last, close to the deadline, not now.
+
+4. (Optional, only if time remains after 1–3) Requirements manifest
+There's no requirements.txt in the repo despite databricks-sql-connector, pytest, and now requests all being used. Have Codex add one at repo root:
+databricks-sql-connector
+pytest
+requests
+Low priority — nice-to-have for judges trying to run it themselves, not required for the demo to work
+in your current environment.
+
+---
+
+Nothing else needs Codex right now. its from my side until you tell me toresume — just let me know when you want me back in, or if something breaks during Codex's run.
+
+---
+
+Codex task list — do in this order
+
+1. Fix two real bugs first (highest priority, hand this to Codex verbatim):
+
+▎ In warden/migrate.py:
+▎
+▎ Bug A (line ~161, ensure_log_table): the ALTER TABLE ... ADD COLUMNS (context_completeness STRING) backfill is wrapped in except Exception: pass, meant to swallow only "column already exists." It swallows everything — including real failures (permissions, connectivity). If the ALTER genuinely fails against a pre-existing table, the very next INSERT (which references context_completeness) fails too, and since log_attempt runs inside apply_migration's main try block, that failure gets caught by the outer handler and triggers an unwarranted Delta rollback on a migration that actually succeeded. Fix: catch a narrower condition, or check information_schema/describe the table for the column first instead of try/except-pass.
+▎
+▎ Bug B (line ~252, apply_migration): pre_version is only assigned inside the try block. If current_delta_version() itself raises (e.g. table missing, transient error), the except handler references pre_version before it's ever set → UnboundLocalError, masking the real error and leaving no migration_log row written at all. Fix: initialize pre_version = None before the try block, and handle the "we never got a version" case explicitly in the except handler (can't roll back to an unknown version, so this becomes a hard failure with a clear message, not a heal attempt).
+▎
+▎ Run python3 -m pytest warden/ databricks/ -q after fixing both, confirm still green, report in ## Done.
+
+2. Then, only if time remains, this cheap fix (~5 min, safe to bundle with #1):
+
+▎ Same file, classify_completeness(): it flags a checkpoint as "redacted" via a bare substring check "REDACTED" in intent, which will misfire on this exact repo (we're building a redaction feature, so "REDACTED" appears in plain, non-redacted commit/checkpoint text too). Tighten it to match Entire's actual placeholder shape: bare REDACTED or [REDACTED_<LABEL>] — a regex like \bREDACTED\b|\[REDACTED_[A-Z_]+\] g unit tests if the regex changeswhich fixtures count as redacted.
+
+3. Skip for now, not worth the remaigs are code-quality/simplification(redundant completeness threading, an over-built wrapper class, an inconsistency in when intent is shown, a duplicated string-building pattern, a per-call schema check). All real but none is a submission-blocking bug — don't spend Codex's budget on them unless #1 and #2 finish with time to spare.
+
+4. Then, the earlier list still applies in this order: commit BUILDATHON.md (already staged, just needs a commit — I can do that one myself,oard link resolves, final fullregression run right before submission, optional requirements.txt.
