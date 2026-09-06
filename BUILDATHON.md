@@ -126,10 +126,16 @@ entire enable -y --agent claude-code   # or codex / opencode
 entire plugin install graph && entire graph init-agents --repo .
 
 # 2. Databricks credentials (gitignored .env, never commit)
+python3 -m pip install -r requirements.txt
 echo 'DATABRICKS_SERVER_HOSTNAME=...' >> .env
 echo 'DATABRICKS_HTTP_PATH=...' >> .env
 echo 'DATABRICKS_TOKEN=...' >> .env
 set -a; source .env; set +a
+
+# One operator-friendly check for both prerequisite systems.
+# Default: local configuration/checkpoint access only. --live adds read-only SELECT 1.
+python3 warden/preflight.py
+python3 warden/preflight.py --live
 
 # 3. Provision the demo table + synthetic seed data
 python3 -c "from databricks import sql; import os; c=sql.connect(server_hostname=os.environ['DATABRICKS_SERVER_HOSTNAME'],http_path=os.environ['DATABRICKS_HTTP_PATH'],access_token=os.environ['DATABRICKS_TOKEN']); cur=c.cursor(); cur.execute('CREATE SCHEMA IF NOT EXISTS warden'); [cur.execute(s) for s in open('databricks/setup.sql').read().split(';') if s.strip()]"
