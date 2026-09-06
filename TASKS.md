@@ -26,6 +26,35 @@ Do NOT touch anything outside `migrations/`. Coordinate with opencode's seed dat
 
 Update `## Done` or `## Blocked` below when finished.
 
+## Now
+**Assigned: Codex**
+
+Your `migrations/` task is done and reviewed — nice work, the constraint/validation contract matched exactly. New task:
+
+Build `warden/demo.sh` — a single script that runs the full live-demo sequence in order, with clear echoed section headers between steps, so it can be run once during judging without fumbling commands:
+1. Print current Delta version of `warden.demo_users` (`DESCRIBE HISTORY ... LIMIT 1`).
+2. Run `python3 warden/migrate.py migrations/001_add_plan_column.sql --validate-sql migrations/001_validate.sql`.
+3. Print the resulting rows in `warden.migration_log` (most recent one).
+4. Print the current Delta version again, to show it matches the pre-migration version (proving the heal actually happened, not just that it printed a message).
+
+Assume `DATABRICKS_SERVER_HOSTNAME`, `DATABRICKS_HTTP_PATH`, `DATABRICKS_TOKEN` are already exported in the shell running this script (from `.env`, gitignored — never read or print the token itself, don't cat .env). Use the `databricks-sql-connector` Python package for the query steps (small inline python3 -c snippets are fine, or a small helper module — your call).
+
+Do NOT touch `warden/migrate.py` itself — that's mine and is mid-testing right now. Only add `warden/demo.sh`. Update `## Done`/`## Blocked` when finished.
+
+## Now
+**Assigned: opencode**
+
+Your Databricks infra task is done and reviewed — good work, the self-test mode was a nice touch. New task:
+
+Live Databricks credentials are now confirmed working (table created, seeded, connection verified). Build `databricks/test_integration.py`: a pytest file that, against the REAL warehouse (env vars from `.env`, already exported in the shell that runs pytest — don't read/print `.env` yourself), asserts:
+1. `warden.demo_users` exists and has exactly 50 rows.
+2. Running the query in `migrations/001_validate.sql` against the current table returns exactly 1 offending row, and that row's `plan = 'legacy'`.
+3. `warden.migration_log` exists (create it if the core CLI hasn't yet — schema: `id STRING, migration_name STRING, status STRING, checkpoint_id STRING, note STRING, ts TIMESTAMP`) — just check it's queryable, don't assert on rows yet since Claude Code's CLI run may or may not have populated it by the time you run this.
+
+Skip (don't fail) any test needing env vars that aren't set, with a clear skip reason — this file may run in environments without live credentials.
+
+Do NOT touch `warden/` or `migrations/`. Only add `databricks/test_integration.py`. Update `## Done`/`## Blocked` when finished.
+
 ## Ground rules for every agent (Claude Code, opencode, Codex)
 - Use Entire yourself while you work, not just as something the product touches: run `entire graph search` / `entire graph impact` before changing code you didn't write, and check `entire checkpoint list` if you're unsure what's already been decided.
 - Write commit messages that capture *why*, not just *what* — rejected options, assumptions, anything you'd want a fresh session to know. Your commits are checkpoints; treat them like it.
@@ -64,6 +93,10 @@ Update `## Done` or `## Blocked` below when finished.
   `README.md`. The validation contract is that any `plan` value outside
   `free`, `pro`, or `enterprise` (including `NULL`) is an offender; the synthetic
   seed should include at least one such row, e.g. `legacy`.
+- **Codex:** Added `warden/demo.sh`, which prints the pre-migration Delta
+  version, runs the migration/validation flow, prints the latest migration log,
+  and prints the post-migration version. It treats exit code 1 as the expected
+  validation/heal result and never reads or prints `.env` or credentials.
 
 ## Blocked / open questions
 _(none yet)_
