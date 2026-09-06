@@ -1,0 +1,77 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TVK9NPX055GX0W0FHWF93J",
+  "session_id": "01a0757c-b060-7432-b490-f0374c27d783",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T07:58:19.459732377Z",
+  "branch": "handoff",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [
+    "TASKS.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-luna",
+  "turn_id": "294ac847b492",
+  "checkpoint_transcript_start": 654,
+  "transcript_lines_at_start": 654,
+  "compact_transcript_start": 89,
+  "token_usage": {
+    "input_tokens": 13879,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1125376,
+    "output_tokens": 3134,
+    "api_call_count": 8
+  },
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-06T07:58:19.152312469Z",
+    "agent_lines": 125,
+    "agent_removed": 0,
+    "human_added": 27,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 152,
+    "total_lines_changed": 152,
+    "agent_percentage": 82.23684210526315,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 121,
+      "user_lines_removed": 76,
+      "agent_lines_added": 89,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72
+      }
+    }
+  ]
+}
