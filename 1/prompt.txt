@@ -1,0 +1,1609 @@
+what are the next steps
+
+---
+
+codex is done
+
+---
+
+An MCP could help, but I would not make “Warden becomes an MCP server” the main late-stage bet. It adds
+  protocol, packaging, and security-boundary risk without improving the strongest Databricks story.
+
+  The sharper opportunity is a checkpoint-native “resume/readiness” interface.
+
+  Right now, Warden is strong on:
+
+  - A real Databricks failure → Delta rollback → safe log.
+  - The curveball implementation and live evidence.
+  - Reproducible demo, self-test, dashboard, recording.
+
+  The weaker rubric evidence is:
+
+  - A fresh agent can resume from a checkpoint.
+  - Graph evidence is directly tied to the privacy-sensitive code paths.
+  - The checkpoint’s “why” is operationally useful without leaking it externally.
+
+  A small local MCP server could improve those three, if it is deliberately read-only and safe. I’d make
+  it expose something like:
+
+  warden_resume_status
+    input: checkpoint_id, migration path
+    output:
+      checkpoint_id
+      context_completeness
+      safe status of intent availability
+      affected migration/table
+      Graph impact evidence
+      latest sanitized migration_log result
+      recommended next action
+
+  Critical constraint: it must never return raw checkpoint intent or transcript text. Treat the MCP
+  client/model as an external boundary. LocalOnlyText.reveal() must stay unavailable to MCP tools.
+
+  That gives a clean judge narrative:
+
+  Fresh agent / MCP host
+          ↓
+  safe resume report from checkpoint + Graph + Databricks state
+          ↓
+  agent knows whether it can proceed, needs a human, or must inspect locally
+          ↓
+  Warden runs or refuses safely
+
+  But there is a tradeoff: an MCP server that only returns sanitized status cannot itself convey the full
+  “why” from a checkpoint. That is correct for privacy, but it means it should be framed as “safe agent
+  handoff/readiness,” not as a replacement for local operator checkpoint inspection.
+
+  My recommendation:
+
+  1. Do not add a broad MCP server now.
+  2. If you have 20–30 minutes, build one narrow, stdio-local, read-only warden_resume_status tool or a
+     CLI equivalent such as python3 warden/resume_report.py.
+
+  3. Demonstrate it from a fresh session using only a checkpoint ID.
+  4. Include a redacted/unavailable fixture result: it must say “context incomplete; do not treat this as
+     authoritative,” while still returning Graph and migration-log evidence.
+
+  5. Keep mutation (apply_migration, rollback, dashboard changes) out of MCP entirely.
+
+  That would materially improve “Use of Entire Checkpoints,” “Use of Entire Graph,” and Curveball safety.
+  It would not add much to the Databricks award, where the current Delta time-travel and live dashboard
+  evidence are already your best proof.
+
+  If time is tight, the existing fresh-process checkpoint reconstruction plus final live evidence is
+  safer than introducing MCP infrastructure.
+
+
+› what if it were to be set up as a package,
+
+  or gave health alerts and proper logging and was optimized for speed and scale and for it to be
+  applied parallely with the cache thing i mentioned, where my idea for a usecase is to have a migration
+  in progress but still be able to run operations smoothly, but at a much cheaper state because other
+  options would be to use a cheaper copy and such,
+
+
+• Yes — that is a much bigger, more compelling product direction than “a script that heals one
+  migration.”
+
+  I’d frame it as:
+
+  > Warden is an online migration control plane for Delta-backed applications: it keeps reads stable,
+  > preserves writes safely, migrates in bounded parallel batches, and uses Entire checkpoints as the
+  > decision and handoff record.
+
+  The package should be the core product. MCP would be an optional adapter on top for agents and
+  operators.
+
+  A good shape would be:
+
+  warden/
+    core/          migration state machine, idempotency, rollback decisions
+    databricks/    Delta, CDF, shallow-clone, warehouse adapters
+    checkpoint/    safe checkpoint context + completeness handling
+    graph/         blast-radius/preflight evidence
+    cache/         versioned read cache and invalidation
+    health/        readiness checks, alerts, SLOs
+    observability/ structured safe logs, metrics, traces
+    cli/           warden plan / run / status / resume
+    mcp/           optional read-only agent tools
+
+  The important distinction is reads versus writes.
+
+  For reads, a versioned cache can keep the application fast and stable during migration:
+
+  application read
+        ↓
+  cache key: customer-table@stable-version
+        ↓
+  current stable Delta version / compatibility view
+
+  The migration runs in the background against a candidate version. Once validation succeeds, Warden
+  atomically moves the application’s “stable version” pointer—usually a compatibility view, routing
+  record, or cache namespace—to the new version. Cache keys change by version, so old cached values are
+  not silently mixed with new-schema data.
+
+  For writes, cache alone is not enough. You need one of these:
+
+  - Dual writes to old and new representations during the transition.
+  - An outbox/queue that captures writes and replays them into the migrated version.
+  - Delta Change Data Feed to catch up changes made while the backfill runs.
+  - A short, explicit write fence only for the final cutover.
+
+  That is the real “operations continue during migration” story. Reads can remain cheap and smooth;
+  writes remain correct rather than merely available.
+
+  For cost, avoid defaulting to a full deep copy. The spectrum is:
+
+   Technique                                               Cost    Good for
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Metadata-only Delta change                            Lowest    Additive schema changes
+  ─────────────────────────────────  ───────────────────────────  ──────────────────────────────
+   Partitioned/background backfill           Controlled compute    Large existing tables
+  ─────────────────────────────────  ───────────────────────────  ──────────────────────────────
+   Shallow clone                      Low storage, some compute    Preflight/validation/staging
+  ─────────────────────────────────  ───────────────────────────  ──────────────────────────────
+   Deep clone / full copy                               Highest    Strong physical isolation
+
+  A shallow clone can be useful as a cheap validation/staging environment because it reuses source data
+  files rather than duplicating them. But it is not automatically the safe production cutover strategy:
+  retention, VACUUM, concurrent writes, and shared-file lifecycle all matter. For the live path, a
+  compatibility view plus incremental backfill/CDF is often the more credible architecture.
+
+  The migration state machine could look like this:
+
+  PLANNED
+    → PREFLIGHTED
+    → BACKFILLING
+    → CATCHING_UP
+    → VALIDATING
+    → CUTTING_OVER
+    → COMPLETE
+         ↘
+          ROLLING_BACK / FAILED
+
+  Every state transition should emit a safe structured event:
+
+  {
+    "migration_id": "…",
+    "checkpoint_id": "…",
+    "context_completeness": "complete",
+    "table": "…",
+    "stable_version": 51,
+    "candidate_version": 52,
+    "phase": "VALIDATING",
+    "rows_processed": 1200000,
+    "lag_seconds": 4,
+    "cache_version": "v52",
+    "error_type": null
+  }
+
+  No raw intent, transcript, row contents, token, or SQL error message should enter those events. That
+  carries your curveball design forward instead of treating it as a one-off fix.
+
+  Health alerts then become genuinely useful:
+
+  - Migration stuck or no progress.
+  - CDF/write-replay lag above an SLO.
+  - Cache stale beyond the allowed version window.
+  - Validation failures or data-quality drift.
+  - Dual-write mismatch rate.
+  - Warehouse cost/concurrency budget exceeded.
+  - Delta rollback version nearing retention/VACUUM danger.
+  - Checkpoint context is redacted or unavailable, requiring explicit operator review before cutover.
+
+  MCP fits best as a read-only operations surface, not the migration engine:
+
+  warden_status
+  warden_resume_report
+  warden_health_alerts
+  warden_migration_plan
+
+  An agent could ask, “Can I safely cut over migration X?” and get a safe answer based on checkpoint
+  completeness, Graph impact, data validation, cache freshness, and write lag. It should never receive
+  raw checkpoint transcript text through MCP.
+
+  This would make the strongest product pitch:
+
+  > Instead of taking an expensive full-copy or downtime approach, Warden incrementally migrates a Delta-
+  > backed workload while serving reads from a stable versioned cache, catching up writes through a
+  > durable change stream, and only cutting over after checkpoint-informed risk checks and validation
+  > pass.
+
+  For the current submission, I would describe this as the credible next step, not claim it is already
+  built. The existing Warden demo proves the core safety primitive: checkpoint-informed migration, safe
+  privacy boundary, Delta validation, time-travel healing, and observable evidence.
+
+---
+
+i think we can crank itout, ill swtich to opus once your usage limit restes, and i have over 50 percent of my credits left so i can manage that
+
+---
+
+can you in a couple bullet points explain everything that we have done as a whole, the track and our work and how entire and databricks are being integrated
+
+---
+
+code finished
+
+---
+
+continue and look at tasks
+
+---
+
+ok as codex works, want you crank out parallely and ensure that we have results and such
+
+---
+
+/code-review
+
+---
+
+codex:
+• Implemented the Phase 2 reliability slice:
+
+  - 3ae8ffac9: bounded manifest scheduler, privacy-safe health report, isolated success fixture.
+  - 0bd97b5f6: runnable two-table manifest and task evidence.
+  - Local verification: 30 passed, 3 skipped; no-credential demo self-test passed.
+
+  I updated TASKS.md with the live-verification result.
+
+  Important blocker: live warden.demo_users_clean has 45 rows, not the expected 50, after setup/seed
+  verification. The baseline failure/heal still showed Delta constraint failure and a safe healed log row
+  with context_completeness=complete, but the final demo transcript stopped before post-version/log
+  output.
+
+  Per the task’s stop-on-failure rule, I did not fix or rerun further tests. The safe submission
+  recommendation is the last fully live-verified baseline commit: f8f9599e5, unless someone diagnoses and
+  fully re-verifies the 45-row discrepancy.
+
+---
+
+<task-notification>
+<task-id>a0cc575f94703a5ca</task-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/a67113eb-8bf5-4f12-a894-98e2726c95df/tasks/a0cc575f94703a5ca.output</output-file>
+<status>completed</status>
+<summary>Agent "/code-review" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>I ran the diff (`git diff @{upstream}...HEAD` — 17 files: `warden/`, `migrations/`, `databricks/`, plus docs; the working-tree changes are only `.gemini/*.md` and a lockfile, no logic) and reviewed every hunk against the surrounding code.
+
+Note: there is no `ReportFindings` tool exposed in this session (`ToolSearch` for it returns nothing), so the findings are below in full.
+
+---
+
+**warden/demo.sh:7 — CRITICAL: the new `--self-test` can never fail.** The script sets `set -uo pipefail` with no `-e`, so `test -s`, `grep -Fq`, and `python3 databricks/seed.py --self-test` are all non-fatal; the block unconditionally falls through to `echo "self-test OK..."; exit 0`. Verified: I replaced `migrations/001_validate.sql` with `-- broken` and `bash warden/demo.sh --self-test` still printed "self-test OK" and exited 0. This is the no-credentials verification path BUILDATHON.md advertises, and it is a no-op. Fix: `set -e` (or `|| { echo ...; exit 1; }` per check). Note line 75's `set -e` also *enables* errexit for the first time, mid-script, which is probably not intended either.
+
+**warden/orchestrate.py:145 — HIGH: `except Exception` misses `SystemExit`, so a credential-less run loses every result.** `execute_migration` → `migrate.apply_migration` → `migrate.connect()`, which calls `sys.exit(1)` when a `DATABRICKS_*` var is missing (migrate.py:135). `SystemExit` derives from `BaseException`, so `future.result()` re-raises it straight past the handler, out of the `with ThreadPoolExecutor` (after blocking on shutdown for the other in-flight migrations), and out of `main`. Verified with a repro: `run_schedule` escapes with `SystemExit 1`, `results` is discarded, nothing is printed. The exact scenario the reviewer of a batch runner cares about — "I forgot to export the token" — yields a silent exit 1 with no per-migration report. Catch `BaseException` (or `Exception, SystemExit`) around `future.result()`.
+
+**warden/orchestrate.py:26 — HIGH: a manifest entry with no `validate_sql` runs unvalidated and is reported "succeeded".** `REQUIRED_FIELDS` omits it and `execute_migration` passes `entry.get("validate_sql")`; `apply_migration` then leaves `offending_rows = 0`, logs status `applied`, and returns 0. Warden's entire premise is validate-then-heal, so an entry that silently skips validation and reports success is the worst possible default for the orchestrator. Either require `validate_sql` or mark such an outcome `succeeded_unvalidated`.
+
+**migrations/002_add_migration_marker.sql:4 — MEDIUM: the new "success" fixture is not re-runnable, and the second run reports failure + rollback.** Run 1 adds `migration_marker` and populates it (validation returns 0 rows, success). Run 2's `ALTER TABLE warden.demo_users_clean ADD COLUMNS (migration_marker STRING)` raises column-already-exists, `apply_migration`'s blanket `except` catches it, and Warden `RESTORE`s `demo_users_clean` to the pre-run version — so the demo's advertised deterministic success path only succeeds once per seed, and the checked-in `manifest.example.json` inherits the same behavior. Use `ADD COLUMNS IF NOT EXISTS` (or re-seed before each run and say so in the README).
+
+**warden/orchestrate.py:156 — MEDIUM: parallelism makes `warden.migration_log` bookkeeping able to roll back a migration that actually succeeded.** `log_attempt` (migrate.py:180) calls `ensure_log_table`, which runs `ALTER TABLE warden.migration_log ADD COLUMNS (context_completeness STRING)` and re-raises anything not matching its duplicate-column string match. The success-path `log_attempt(..., "applied", ...)` (migrate.py:287) is *inside* `apply_migration`'s `try`, so with two migrations landing concurrently, a Delta concurrent-modification / metadata-conflict error on that ALTER propagates to the `except`, and Warden then issues `RESTORE TABLE ... TO VERSION AS OF pre_version` — undoing a migration that applied and validated cleanly, and recording it as `healed`. Move the success-path logging outside the `try` (or guard `ensure_log_table` behind a lock/one-shot at orchestrator startup).
+
+**warden/orchestrate.py:171 — LOW: `--max-workers 0` is silently ignored and the guard below it is dead code.** `workers = args.max_workers or manifest_workers` treats `0` as falsy, so `--max-workers 0` falls back to the manifest value; `if workers &lt; 1: parser.error(...)` can then never fire, because `load_manifest` already rejects a manifest value `&lt; 1` and any explicit negative is truthy and caught. Verified: `--max-workers 0` on `manifest.example.json` reports `"max_workers": 2` and exits 0. Use `args.max_workers if args.max_workers is not None else manifest_workers`.
+
+**databricks/seed.py:96 — LOW: the clean-table write can leave the demo half-seeded.** `setup.sql` uses `CREATE TABLE IF NOT EXISTS`, so any workspace provisioned before this PR has `demo_users` but not `demo_users_clean`. `seed.py` now replaces `demo_users` first (already committed — Databricks has no multi-statement transaction here), then hits `DELETE FROM warden.demo_users_clean` and dies with a traceback, never printing the summary. The operator ends up with a partially seeded demo and no indication which half ran. Either run the two tables' writes in the safe order (clean first) or check/create the table before deleting anything.
+
+**warden/test_health_report.py:47 — LOW: `test_health_snapshot_and_both_renderers_never_leak_raw_intent_or_error` asserts nothing.** `secret_intent` is defined but never fed into the system (`checkpoint_context` is patched to return a bare `object()`), and `secret_error` is returned as `latest_log_status`'s *second* element, which `health_snapshot` only attaches when `log_row is None` — and the test supplies a truthy `safe_log`. Both `assert ... not in output` lines pass vacuously, so the test named as the privacy guarantee would not catch a regression that leaked either value. Make `checkpoint_context` return `LocalOnlyText(secret_intent)` and add a second case with `log_row=None`.
+
+---
+
+Findings, one line each:
+
+- `warden/demo.sh:7` — no `set -e`, so `--self-test` always prints OK and exits 0 even with broken fixtures (verified).
+- `warden/orchestrate.py:145` — `except Exception` misses `SystemExit` from `migrate.connect()`; a missing credential discards all results and exits silently (verified repro).
+- `warden/orchestrate.py:26` — `validate_sql` is not a required manifest field, so an entry without it runs unvalidated and is reported `succeeded`.
+- `migrations/002_add_migration_marker.sql:4` — `ADD COLUMNS` is not idempotent; the second run fails and Warden rolls back the marker, so the "success" demo works only once.
+- `warden/orchestrate.py:156` — concurrent `ensure_log_table` `ALTER` inside `apply_migration`'s `try` can trigger a `RESTORE` that undoes a migration that applied and validated.
+- `warden/orchestrate.py:171` — `--max-workers 0` silently falls back to the manifest value; the `workers &lt; 1` guard is unreachable (verified).
+- `databricks/seed.py:96` — on a pre-existing workspace without `demo_users_clean`, the seed dies after already replacing `demo_users`, leaving the demo half-seeded.
+- `warden/test_health_report.py:47` — both "never leak" assertions are vacuous; neither secret value ever enters the snapshot.</result>
+<usage><subagent_tokens>151246</subagent_tokens><tool_uses>18</tool_uses><duration_ms>268831</duration_ms></usage>
+</task-notification>
+
+---
+
+• Brutal verdict: we improved the project’s ceiling, but not its submission confidence yet.
+
+  Current evidence:
+
+  - Local: 30 passed, 3 skipped; Python compilation and no-credential self-test pass.
+  - Baseline live demo: previously verified end-to-end, including Delta rollback and safe log row.
+  - Phase 2: local-only verification. Live verification is incomplete.
+
+  ## Critical blockers
+
+  1. The new success fixture is not reproducibly live-verified.
+
+     Source generates 50 clean rows, but the live read showed warden.demo_users_clean has 45. This could
+     be a partially interrupted seed run rather than a logic defect, but it is still failed evidence.
+
+  2. 002_add_migration_marker.sql is non-idempotent.
+
+     After it succeeds once, re-running it tries to add migration_marker again and will fail. seed.py
+     clears rows but does not reset that column/schema, so the “success scenario” is not repeatable
+     without explicit reset behavior.
+
+  3. Current docs overclaim slightly.
+
+     BUILDATHON.md says the success fixture is demonstrated. It is implemented and locally tested, but
+     not live-demonstrated. If submitting current HEAD, that wording should be softened.
+
+  4. Current HEAD lacks a complete live regression.
+
+     The final live run reached the expected constraint failure and restore, and a read-only query
+     confirmed:
+      - safe ServerOperationError note
+      - no raw intent/error values in the database note
+
+     But the demo channel stopped before capturing the post-version and printed log row, and the live
+  5. Scheduler/health additions are credible but not production-ready.
+
+     The scheduler has strong unit tests for worker bounds, same-table serialization, and failure
+     isolation, but no live concurrency/load evidence or dependency graph beyond “same table serial.”
+
+     health_report.py --table interpolates a caller-provided table identifier into SQL. It should
+     validate identifiers before a production release.
+
+  ## Score, honestly
+
+   Rubric                    Before Phase 2    Current HEAD, as-is    If Phase 2 is fully live-verified
+  ━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Entire challenge                 ~77/100             ~79–81/100                           ~83–86/100
+  ────────────────────────  ────────────────  ─────────────────────  ───────────────────────────────────
+   Best Use of Databricks           ~80/100             ~80–82/100                           ~85–88/100
+
+  Main-rubric current estimate:
+
+  - Problem & innovation: 16/20 — strong real problem and useful checkpoint-native recovery.
+  - Technical implementation: 19/25 — baseline is real; new scale layer remains local-only.
+  - Curveball response: 14/15 — excellent structural privacy boundary, tests, and live safe-log evidence.
+  - Entire Checkpoints: 13/15 — resume report materially improves this; still not a literal fresh
+    independent agent continuing a meaningful change.
+
+  - Entire Graph: 12/15 — much improved through targeted impact and semantic-diff evidence; log_attempt
+    Graph query timing out remains a gap.
+
+  - Demonstration/future: 7/10 — baseline demo and recording are good, but current Phase 2 weakens
+    reproducibility until live verification is finished.
+
+  Databricks current estimate:
+
+  - Meaningful use: 27/30 — Delta time travel and native constraint enforcement are genuinely load-
+    bearing.
+
+  - Working/reliability: 17/25 — baseline is proven; current fixture/setup path is not.
+  - User value/product decisions: 17/20 — focused migration-recovery story, sensible boundaries.
+  - Data quality/provenance: 14/15 — synthetic provenance is unusually clear.
+  - Curveball: 9/10 — privacy boundary is implemented and live-checked.
+
+  The safest submission is still f8f9599e5, the last fully live-verified baseline. The Phase 2 commits
+  make the project stronger, but should only be submitted after resolving the 45-row fixture result,
+  proving the success path once, and either making 002 resettable or documenting it as one-shot.
+
+---
+
+i want to make it 95 for both, lets try to do that we still have over 20 min
+
+---
+
+check tasks.md and lmk what to tell codex to look into quickly, also paralleize your work use subagents
+
+---
+
+<task-notification>
+<task-id>a4bb2a70a42321526</task-id>
+<tool-use-id>toolu_01A893DRuk8QNR6CafF1nL3k</tool-use-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/a67113eb-8bf5-4f12-a894-98e2726c95df/tasks/a4bb2a70a42321526.output</output-file>
+<status>completed</status>
+<summary>Agent "Audit submission docs for overclaims" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Audit complete. Read BUILDATHON.md end to end at HEAD `2b7e88221` and cross-checked every claim against that tree.
+
+**No Phase 2 leakage** — `orchestrate.py`, `health_report.py`, `002_*`, `demo_users_clean`, `manifest.example.json` are absent from the tree, and the only mention (line 172) correctly labels them as living on `handoff` past this commit and explains why they're excluded. Clean.
+
+**Both advertised credential-free commands work:** `bash warden/demo.sh --self-test` → exit 0; `pytest warden/ databricks/ -q` → 18 passed, 3 skipped. All claimed line numbers are exact (`log_attempt`:180, `apply_migration`:246, `main`:337, `ensure_log_table`:149), and `test_ensure_log_table_propagates_non_duplicate_alter_errors` exists.
+
+Prioritized findings:
+
+**1. HIGH — BUILDATHON.md:63 directly contradicts lines 35–45.** Line 63 states log_attempt's query "exceeded the local 30-second Graph window" and "that unavailable Graph result is **not presented as a successful finding**." But lines 35–45 now do exactly that, presenting the completed warm-index result. A judge reading top-to-bottom hits the success at :35, then a claim at :63 that it failed and wasn't used. Line 63 is stale — it predates the re-run. Delete it or fold its still-valid `get_latest_checkpoint` content into :35's block.
+
+**2. LOW — lines 166 and 168 are near-duplicate paragraphs** about `resume_report.py`, four lines apart, both opening with the same command. :168 supersedes :166 (adds the leak-proof test detail). Reads as an editing artifact.
+
+**3. LOW — line 61 says "the five checkpoint tests."** There are 6 matching `get_latest_checkpoint`/`classify_completeness` tests (4 + classify + describe_failure-with-redacted). Undercount, harmless, but "six" or "the checkpoint tests" is safer.
+
+No overclaims, no failing instructions, no invented capabilities found. Fix #1 if you have minutes; #2 and #3 are cosmetic.</result>
+<usage><subagent_tokens>418038</subagent_tokens><tool_uses>5</tool_uses><duration_ms>44536</duration_ms></usage>
+</task-notification>
+
+---
+
+na dont worry about it will try pushing for a better submission until the end, and we have safe ones to submit so i am not worried about that
+
+---
+
+if there is a placeholder for future scope mention that we would like to be able to do this with multiple tables and parallize more and get live updates and have the user have the option to input and manage more data inbetween and adjust certain things, like change keys or conglomerate or split exisitng tables and such
+
+---
+
+also check whatever codex has done
+
+---
+
+/code-review
+
+---
+
+• I’m putting the preflight on a separate candidate branch from the exact verified SHA, so the submitted
+  2b7e88221 remains recoverable. It will check Entire checkpoint access and Databricks credential/
+  warehouse readiness without printing secrets, intent, or database error bodies.
+ what codex said
+
+---
+
+<task-notification>
+<task-id>adf64810718f91bd3</task-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/a67113eb-8bf5-4f12-a894-98e2726c95df/tasks/adf64810718f91bd3.output</output-file>
+<status>completed</status>
+<summary>Agent "/code-review" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>ReportFindings isn't available in this environment (no matching tool), so the findings are stated in full below.
+
+## Findings
+
+**warden/demo.sh:5 — CRITICAL: the new `--self-test` block can never fail.** The script sets `set -uo pipefail` with no `-e`, and the self-test block runs *before* the `set -e` that line 75 later turns on. So `test -s`, both `grep -Fq`, and `python3 databricks/seed.py --self-test` all run with their exit codes discarded; the script prints "self-test OK ..." and `exit 0` unconditionally. Verified: I replaced `migrations/001_validate.sql` with `SELECT 1;` and `bash warden/demo.sh --self-test` still reported OK with `EXIT=0`. Fix: `set -euo pipefail`, or `|| { echo ...; exit 1; }` on each check.
+
+**warden/orchestrate.py:145 — `SystemExit` from a worker escapes the scheduler and destroys the whole report.** `execute_migration` → `apply_migration` → `connect()`, which calls `sys.exit(1)` when a `DATABRICKS_*` env var is missing. `sys.exit` raises `SystemExit`, a `BaseException`, so `except Exception as error` does not catch it; `future.result()` re-raises it in the main thread and it propagates out of `run_schedule`. Verified with a stub executor calling `sys.exit(1)`: `PROPAGATED: SystemExit(1)`. Concrete scenario: run `orchestrate.py warden/manifest.example.json` with `DATABRICKS_TOKEN` unset — no JSON report, no per-table skip bookkeeping, and results already collected from sibling tables are discarded. Catch `BaseException` (or have `connect()` raise instead of `sys.exit`).
+
+**warden/health_report.py:49 — `_as_utc` interprets a naive timestamp two different ways depending on its type.** The `datetime` branch stamps `timezone.utc` on a naive value; the `str` branch calls `datetime.fromisoformat(...).astimezone(...)`, which treats a naive string as **local** time. Verified under `TZ=Asia/Kolkata` with `now=2026-09-07T10:00Z`: `datetime(2026,9,6,12,0)` → no alert, the identical instant as `"2026-09-06T12:00:00"` → `migration_status_stale`. Any operator not on UTC gets false (or missed) staleness alerts depending on how the driver returns `ts`.
+
+**migrations/002_add_migration_marker.sql:4 — the "deterministic success" scenario only succeeds once.** `ALTER TABLE ... ADD COLUMNS (migration_marker STRING)` errors on a second run because the column already exists. `apply_migration` catches that, and since `pre_version` is known it runs `RESTORE TABLE warden.demo_users_clean TO VERSION AS OF ...` and returns 1. So re-running the demo (or the example manifest) flips the success path into a failure-and-heal path — the exact nondeterminism the README says these two fixtures exist to avoid. Guard with `ADD COLUMNS IF NOT EXISTS` or drop the column first in a re-seed step.
+
+**warden/resume_report.py:23 — `migration_target()` always reports migration 001, regardless of which migration is actually relevant.** The loop `return`s on the *first* non-validate file in sorted order, so with `002_add_migration_marker.sql` now present it still reports `migrations/001_add_plan_column.sql` / `warden.demo_users`. Meanwhile `latest_log_status()` returns the most recent log row, which may be the 002 attempt against `warden.demo_users_clean`. The report then pairs a 002 status line with a 001 "Affected table", and its "Recommended next action" points the operator at the wrong table. Correlate on `log_row["migration_name"]` (already selectable from `warden.migration_log`) instead of globbing.
+
+**warden/health_report.py:87 — `health_snapshot`'s `environment` parameter is only half honoured.** `credentials_available` and `table_availability` receive `environment`, but `latest_log_status()` is called with no arguments and reads `os.environ` directly. Passing an explicit environment therefore yields a snapshot whose `credentials.available: False` sits next to a `latest_migration` row fetched with the ambient credentials (or vice versa). Only the tests' `patch` currently hides this; any non-`main()` caller gets an internally inconsistent snapshot.
+
+**warden/health_report.py:83 — the default invocation always emits a warning alert.** With no `--checkpoint-id`, `completeness` is set to `"unavailable"`, which `build_alerts` turns into `{"severity": "warning", "code": "checkpoint_context_incomplete"}`. So `python3 warden/health_report.py --json` — the intended alerting entry point — reports a permanent warning even on a perfectly healthy system, conflating "no checkpoint was requested" with "checkpoint context is broken". Skip the alert when `checkpoint_id` is `None`.
+
+**warden/orchestrate.py:171 — `--max-workers 0` is silently ignored.** `workers = args.max_workers or manifest_workers`: `0` is falsy, so it falls through to the manifest value rather than reaching the `if workers &lt; 1: parser.error(...)` guard three lines down. `--max-workers -1` correctly errors, `--max-workers 0` silently runs at the manifest's concurrency. Use `args.max_workers if args.max_workers is not None else manifest_workers`.
+
+No issues found in `databricks/seed.py`'s `generated_clean_rows`, the `run_schedule` per-table serialization/skip logic (the ordering and failure-isolation invariants hold, including the unreachable-`continue` guard), or the `LocalOnlyText` boundary — the new tests genuinely cover the leak paths. `.gemini/agents/*.md` and `.opencode/package-lock.json` in the working tree are non-functional. All 30 warden tests pass.</result>
+<usage><subagent_tokens>145387</subagent_tokens><tool_uses>17</tool_uses><duration_ms>211503</duration_ms></usage>
+</task-notification>
+
+---
+
+Send Claude Code this handoff:
+
+  Status: safe-submission is now based on `fa6d0d79f98e88c826d99f14cd64649213381ec0`.
+
+  I did NOT modify, stage, commit, or merge anything on `safe-submission`.
+  I created an isolated uncommitted branch for an optional operator-experience polish:
+
+    worktree: /tmp/warden-exact-submission
+    branch: submission-operator-preflight
+    base: fa6d0d79f
+
+  Uncommitted files there:
+  - BUILDATHON.md
+  - requirements.txt
+  - warden/preflight.py
+  - warden/test_preflight.py
+
+  What it adds:
+  1. `requirements.txt`
+     - databricks-sql-connector
+     - pytest
+     - requests
+
+  2. `warden/preflight.py`
+     - One operator command for both Entire + Databricks.
+     - `python3 warden/preflight.py`
+       checks Entire checkpoint access and whether all three Databricks env vars
+       are configured; makes no warehouse call.
+     - `python3 warden/preflight.py --live`
+     - Never prints credentials, raw checkpoint intent, or raw database errors.
+     - Exit 0 only when both systems are ready.
+
+  3. BUILDATHON setup instructions add:
+     - `python3 -m pip install -r requirements.txt`
+     - both preflight commands before provision/demo.
+
+  4. Tests cover:
+     - Entire + Databricks configured => ready
+     - unavailable Entire / missing Databricks variables => not-ready
+     - live DB errors reduced to type-only
+     - no token leakage in rendered/JSON output
+
+  Validation performed on the optional preflight branch:
+  - `python3 -m pytest warden/ databricks/ -q` with credentials:
+    `26 passed in 12.22s`
+  - without credentials:
+    `23 passed, 3 skipped in 0.55s`
+  - `python3 warden/preflight.py --live --json`:
+    Entire ready, Databricks ready, warehouse_checked=true, ready=true.
+  - `bash warden/demo.sh --self-test` passes.
+  - Copied-fixture negative test:
+    intact self-test exits 0; replacing `001_validate.sql` with broken content
+    makes self-test exit non-zero.
+  - `python3 -m compileall -q warden databricks` passes.
+  - `git diff --check` passes.
+
+  Baseline live evidence already reconfirmed:
+  - latest log row: `status='healed'`
+  - `context_completeness='complete'`
+  - safe note contains `ServerOperationError` only, no raw intent/row values
+  - current Delta version after restore: 153
+  - pre/post match verified as 153.
+
+  Caveat:
+  - `mise` is unavailable in this environment, so `mise run test:ci` could not run.
+  - `go test ./...` exceeded this environment’s 30-second command window; it
+    started successfully and reported `api/checkpoint` passing, but it is NOT a
+    complete Go-suite pass here.
+  - No paid real-agent E2E tests were run.
+
+  Recommendation:
+  - Review the four uncommitted preflight changes with:
+    `git -C /tmp/warden-exact-submission diff`
+  - If accepted, stage/commit them on a new branch and rerun the 26-test suite.
+  - Keep `safe-submission` at `fa6d0d79f` as the fallback until that candidate is
+    reviewed and committed.
+
+  The optional preflight is the clearest addition for users managing Entire and Databricks together.
+
+---
+
+give me teh prompt to give to codex for it to do this quickly
+
+---
+
+if i submit the work codex just did would it be better or the safe submsisison
+
+---
+
+Project Title*
+Code Repository*
+Documentation*
+Demo VideoOptional
+Pitch DeckOptional
+Live Project LinkOptional
+Notes (optional)
+Required before submitting: Code Repository, Documentation
+
+---
+
+for documentation i just put the buildathon.md  that is all
+
+---
+
+when the judges come and ask me things how should i go about it, and how can i really demonstrate this in action do we have a flow for that, and how can i address teh main questions that will be present for track 1 and when asked how i avoided the curveball and such
+
+---
+
+where do i run bash
+
+---
+
+can you make a slide deck for me that visually demonstrate everything that has been done and demonstrates the user flwo and some potenital usecases as well so taht they can get a complete and proper idea for it
+
+---
+
+can you put it here as a file locally so that i can put it in my submission
+
+---
+
+and can you also make a better more detailed and ellaborte file for the documenation section that explains
+
+---
+
+also can you make the html into a pdf or something
+
+---
+
+importing from GitHub
+Aditaro/cli
+main
+
+---
+
+is that fine
+
+---
+
+and this is the github page as a whole: 
+
+
+Skip to content
+
+    Aditaro
+    cli
+
+Repository navigation
+
+    Code
+    Pull requests
+    Agents
+    Actions
+    Projects
+    Security and quality
+    Insights
+    Settings
+
+Aditaro
+cli
+Public
+
+forked from entireio/cli
+submission-operator-preflight had recent pushes 21 minutes ago
+vercel-showcase had recent pushes 4 minutes ago
+safe-submission had recent pushes 25 seconds ago
+tT
+This branch is 39 commits ahead of entireio/cli:main.
+Aditaro
+Aditaro
+docs: add Vercel-ready Warden visual showcase
+380a177
+ · 
+4 minutes ago
+Name    Last commit message
+    Last commit date
+.claude
+    
+fix(agent): drop an emptied permissions block on the install path too
+    
+3 days ago
+.codex
+    
+feat(codex): track subagents via Codex's SubagentStart/SubagentStop h…
+    
+3 weeks ago
+.cursor
+    
+install.sh: feature-probe reftable support; robust git install
+    
+2 weeks ago
+.devcontainer
+    
+fix: generate random keyring password instead of using hard-coded def…
+    
+5 months ago
+.entire
+    
+Initial understanding: Handoff on Track 1 (Checkpoint-Native DX)
+    
+4 hours ago
+.ferrata
+    
+PR feedback
+    
+6 months ago
+.gemini
+    
+refactor(hooks)!: remove local_dev mode
+    
+3 weeks ago
+.github
+    
+Merge pull request entireio#2152 from entireio/feat/windows-powershel…
+    
+2 days ago
+.opencode
+    
+fix(opencode): spawn hooks via node:child_process for Desktop
+    
+3 weeks ago
+.pi/extensions/entire
+    
+refactor(hooks)!: remove local_dev mode
+    
+3 weeks ago
+.vscode
+    
+vscode compiles e2e tag
+    
+7 months ago
+api/checkpoint
+    
+Follow the rename through strings, comments, skill and docs
+    
+last week
+cmd
+    
+flock: retry an open whose file was replaced, and derace the tests
+    
+14 hours ago
+databricks
+    
+databricks: add Lakeview dashboard creation script (Codex)
+    
+2 hours ago
+docs
+    
+harden executable resolution across the CLI
+    
+2 days ago
+e2e
+    
+Merge pull request entireio#2270 from entireio/soph/opencode-e2e-diag…
+    
+2 days ago
+internal
+    
+Merge pull request entireio#2232 from entireio/security/session-state…
+    
+3 days ago
+migrations
+    
+Add Warden migration validation demo
+    
+4 hours ago
+mise-tasks
+    
+Lint install.ps1 with PSScriptAnalyzer in CI.
+    
+2 days ago
+perf
+    
+perf: stop the trace help claiming slow hooks are always traced
+    
+3 weeks ago
+public
+    
+docs: add Vercel-ready Warden visual showcase
+    
+4 minutes ago
+redact
+    
+Refuse what os.Root only confined
+    
+5 days ago
+scripts
+    
+Shorten the documented install.ps1 one-liners.
+    
+2 days ago
+tools/complexity
+    
+Document the reachability tool's interface blind spot
+    
+last week
+warden
+    
+feat: operator preflight for Entire + Databricks readiness
+    
+22 minutes ago
+.allowed-licenses
+    
+license: record segmentio/asm as MIT-0, not MIT
+    
+4 months ago
+.gitignore
+    
+Curveball received: Track 1 Privacy Boundary. Stopping implementation…
+    
+3 hours ago
+.golangci.yaml
+    
+refactor: unwind the rest of the status-cache rationale
+    
+last month
+.goreleaser.nonprod.yaml
+    
+Publish git-remote-entire per-commit to the public release bucket
+    
+2 months ago
+.goreleaser.yaml
+    
+Correct the Scoop shim and failure-safety claims
+    
+3 weeks ago
+.license-overrides
+    
+license: record segmentio/asm as MIT-0, not MIT
+    
+4 months ago
+.worktreeinclude
+    
+Add basic .worktreeinclude file
+    
+3 months ago
+AGENTS.md
+    
+ln -s CLAUDE.md AGENTS.md
+    
+7 months ago
+BUILDATHON.md
+    
+feat: operator preflight for Entire + Databricks readiness
+    
+22 minutes ago
+CHANGELOG.md
+    
+Update CHANGELOG with fixed issues
+    
+3 days ago
+CLAUDE.md
+    
+Initial understanding: Handoff on Track 1 (Checkpoint-Native DX)
+    
+4 hours ago
+CODE_OF_CONDUCT.md
+    
+docs: update Code of Conduct community platform from Slack to Discord
+    
+6 months ago
+CONTRIBUTING.md
+    
+Mirror Working with agents section into CONTRIBUTING.md
+    
+4 months ago
+LICENSE
+    
+add MIT License
+    
+8 months ago
+README.md
+    
+Shorten the documented install.ps1 one-liners.
+    
+2 days ago
+SECURITY.md
+    
+Update bug reporting instructions in SECURITY.md
+    
+7 months ago
+TASKS.md
+    
+warden: add privacy-safe checkpoint resume report
+    
+1 hour ago
+VERCEL.md
+    
+docs: add Vercel-ready Warden visual showcase
+    
+4 minutes ago
+WINDOWS.md
+    
+refactor(test): migrate rewind --list consumers to checkpoint list --…
+    
+2 months ago
+go.mod
+    
+go.mod: pin auth-go to merged main (78f4dc5)
+    
+4 days ago
+go.sum
+    
+go.mod: pin auth-go to merged main (78f4dc5)
+    
+4 days ago
+mise.toml
+    
+build: move the auth-go pin to 86c083b and bump Go to 1.26.6
+    
+3 weeks ago
+requirements.txt
+    
+feat: operator preflight for Entire + Databricks readiness
+    
+22 minutes ago
+vercel.json
+    
+docs: add Vercel-ready Warden visual showcase
+    
+4 minutes ago
+Repository files navigation
+
+    README
+    Code of conduct
+    Contributing
+    License
+    Security
+
+Entire CLI
+
+Entire hooks into your Git workflow to capture AI agent sessions as you work. Sessions are indexed alongside commits, creating a searchable record of how code was written in your repo.
+
+With Entire, you can:
+
+    Understand why code changed — see the full prompt/response transcript and files touched
+    Recover instantly — resume from a known-good checkpoint when an agent goes sideways
+    Keep Git history clean — agent context lives outside your branch's history
+    Onboard faster — show the path from prompt → change → commit
+    Maintain traceability — support audit and compliance requirements when needed
+
+Why Entire
+
+    Understand why code changed, not just what — Transcripts, prompts, files touched, token usage, tool calls, and more are captured alongside every commit.
+    Resume from any checkpoint — Go back to any previous agent session and pick up exactly where you or a coworker left off.
+    Full context preserved and searchable — A versioned record of every AI interaction tied to your git history, with nothing lost.
+    Zero context switching — Git-native, two-step setup, works with Claude Code, Codex, Gemini, Pi, and more.
+
+Table of Contents
+
+    Why Entire
+    Requirements
+    Quick Start
+    Release Channels
+    Typical Workflow
+    Key Concepts
+        Sessions
+        Checkpoints
+        Checkpoint Storage
+        How It Works
+        Strategy
+    Headless & CI Authentication
+    Commands Reference
+    Plugins
+    Configuration
+    Security & Privacy
+    Troubleshooting
+    Development
+    Getting Help
+    License
+
+Requirements
+
+    Git
+    macOS, Linux or Windows
+    Supported agent installed and authenticated
+    Go 1.26+ only if you install with go install (the packaged installs bundle their own runtime)
+
+Quick Start
+macOS and Linux
+
+Install with Homebrew:
+
+brew tap entireio/tap
+brew trust entireio/tap
+brew install --cask entire            # stable
+# brew install --cask entire@nightly  # or nightly
+
+Or with the install script:
+
+curl -fsSL https://entire.io/install.sh | bash                          # stable
+# curl -fsSL https://entire.io/install.sh | bash -s -- --channel nightly  # or nightly
+
+Windows
+
+Install with Windows PowerShell 5.1 or later:
+
+irm https://entire.io/install.ps1 | iex  # stable
+# or nightly:
+# iex "& {$(irm https://entire.io/install.ps1)} -Channel nightly"
+
+For stable releases, the PowerShell installer uses Scoop when it is available, adding the Entire bucket if needed. Without Scoop — and for nightly releases — it verifies the release checksum and installs both entire.exe and git-remote-entire.exe to %USERPROFILE%\.local\bin, adding that directory to your user PATH if needed.
+
+Or install the stable release with Scoop:
+
+scoop bucket add entire https://github.com/entireio/scoop-bucket.git
+scoop install entire/entire
+
+Migrating an old cli Scoop install (package rename)
+
+The Scoop package was renamed from cli to entire. If your install is still registered as the old cli package, run the migration below. It installs the new package before removing the old one, so the old install is only removed once the new one is in place (scoop reset re-links the shared entire.exe and git-remote-entire.exe shims). Run it where entire is not running — a live entire.exe locks its own shim, so Scoop can't relink or uninstall it mid-run:
+
+cmd.exe /D /C "scoop install entire/entire && scoop uninstall entire/cli && scoop reset entire"
+
+If the first step fails with "couldn't find manifest", your bucket clone predates the renamed package — run scoop update to refresh it, then retry the command above. Nothing is removed until the install succeeds, so a failed attempt leaves your existing install working.
+Go (development/manual setup)
+
+go install github.com/entireio/cli/cmd/entire@latest
+
+# The git remote helper that resolves entire:// URLs, needed for `entire repo clone`
+# and `git clone entire://…`. The packaged installs above bundle it.
+go install github.com/entireio/cli/cmd/git-remote-entire@latest
+
+# Add Go binaries to PATH (add to ~/.zshrc or ~/.bashrc if not already configured)
+export PATH="$HOME/go/bin:$PATH"
+
+Install both, or just entire if you never clone over entire://. Git finds the helper by name on $PATH, which is what go install produces, so nothing else needs configuring.
+
+One difference from a stable release: a go install build leaves experimental commands visible in entire help, the same as a nightly or a local build.
+Enable in your project
+
+cd your-project && entire enable
+
+# Check status
+entire status
+
+After the initial setup, use entire agent to add or remove agents, entire configure to update non-agent settings, and entire enable / entire disable to toggle Entire on or off.
+Release Channels
+
+Entire currently ships two release channels:
+
+    stable: recommended for most users. Stable releases change less often and are the default for Homebrew, Scoop, and install.sh.
+    nightly: prerelease builds for users who want the latest changes earlier. Nightlies are published more frequently and may include newer, less-proven changes than stable.
+
+How to use each channel:
+
+    Homebrew (one-time setup): brew tap entireio/tap && brew trust entireio/tap
+    Homebrew stable: brew install --cask entire
+    Homebrew nightly: brew install --cask entire@nightly
+    install.sh stable: curl -fsSL https://entire.io/install.sh | bash
+    install.sh nightly: curl -fsSL https://entire.io/install.sh | bash -s -- --channel nightly
+    install.ps1 stable (uses Scoop when available): irm https://entire.io/install.ps1 | iex
+    install.ps1 nightly: iex "& {$(irm https://entire.io/install.ps1)} -Channel nightly"
+    Scoop: currently supports stable only via scoop install entire/entire
+
+Typical Workflow
+1. Enable Entire in Your Repository
+
+entire enable
+
+On a repo that has not been enabled yet, entire enable runs the initial enable flow: it creates Entire settings, installs git hooks, and prompts you to choose which agent hooks to install. To enable a specific agent non-interactively, use entire enable --agent <name> (for example, entire enable --agent cursor).
+
+After setup:
+
+    Use entire enable to turn Entire back on if the repo is currently disabled.
+    Use entire agent to add or remove agents.
+    Use entire configure to update non-agent settings (telemetry, hooks, checkpoint remote, summary provider).
+
+The hooks capture session data as you work. Checkpoints are created when you or the agent make a git commit. Your code commits stay clean, Entire never creates commits on your active branch. Session metadata is stored outside your branch's history, in the checkpoint storage described under Checkpoint Storage.
+2. Work with Your AI Agent
+
+Just use one of your AI agents as before. Entire runs in the background, tracking your session:
+
+entire status  # Check current session status anytime
+
+3. Resume a Previous Session
+
+To restore the latest checkpointed session metadata for a branch:
+
+entire session resume <branch>
+
+Entire checks out the branch, restores the latest checkpointed session metadata (one or more sessions), and prints command(s) to continue.
+4. Disable Entire (Optional)
+
+entire disable
+
+Removes the git hooks. Your code and commit history remain untouched.
+Key Concepts
+Sessions
+
+A session represents a complete interaction with your AI agent, from start to finish. Each session captures all prompts, responses, files modified, and timestamps.
+
+The session ID is the unique identifier the agent itself provides — Entire never mints its own — so an ID you see in entire session list is the same one the agent uses. The format is the agent's to choose: most supply a UUID (e.g. 019efea2-b46a-7cbc-be01-4c13460f5019), while OpenCode uses ses_-prefixed IDs.
+
+Sessions are stored separately from your code commits, in the repo's checkpoint storage.
+Checkpoints
+
+A checkpoint is a snapshot within a session—a "save point" in your work.
+
+Checkpoints are created when you or the agent make a git commit, and the commit carries an Entire-Checkpoint: <id> trailer linking the two.
+
+Checkpoint IDs are 26-character ULIDs (e.g. REDACTED), which sort by creation time. Checkpoints written by older versions of Entire carry a legacy 12-character hex ID (e.g. a3b2c4d5e6f7); both formats stay readable in the same repo, and you can pass either to any command that takes a checkpoint ID.
+Checkpoint Storage
+
+Checkpoints live in your repository's own git object store, never in your branch's history. Each checkpoint is its own git ref:
+
+refs/entire/checkpoints/<shard>/<id>
+
+The ref points at a commit whose tree is that checkpoint — metadata.json, the per-session transcript files, and any subagent task records. <shard> is the last two characters of the ID, which keeps the refs evenly distributed.
+
+Because checkpoints are independent refs, they are written, pushed, and fetched independently. There is no shared branch tip for concurrent sessions to contend on, and a reader can fetch exactly the one checkpoint it needs instead of a whole history. A checkpoint written on another machine is fetched on demand the first time you read it.
+
+entire enable sets this up; there is nothing to configure. It is recorded in .entire/settings.json as:
+
+{
+  "checkpoints": {
+    "primary": { "type": "git-refs" }
+  }
+}
+
+Inspect what a repo has locally with plain git, or through Entire:
+
+git for-each-ref refs/entire/checkpoints    # the raw refs
+entire checkpoint list                      # checkpoints on this branch
+entire checkpoint explain <id>              # one checkpoint in full
+
+How It Works
+
+Your Branch                      Checkpoint storage
+     │                                  │
+     ▼                                  │
+[Base Commit]                           │
+     │                                  │
+     │  ┌─── Agent works ───┐           │
+     │  │  Turn 1           │           │
+     │  │  Turn 2           │           │
+     │  │  Turn 3           │           │
+     │  └───────────────────┘           │
+     │                                  │
+     ▼                                  ▼
+[Your Commit] ─────────────────► [Checkpoint]
+  Entire-Checkpoint: <id>          (transcript, prompts,
+     │                              files touched, tokens)
+     ▼
+
+Work in progress is held on a short-lived shadow branch as you go. When you commit, that work is condensed into a permanent checkpoint and linked to your commit by an Entire-Checkpoint trailer.
+Strategy
+
+Entire uses a manual-commit strategy that keeps your git history clean:
+
+    No commits on your branch — Entire never creates commits on the active branch
+    Safe on any branch — works on main, master, and feature branches alike
+    Metadata stored separately — session data lives in per-checkpoint refs, never in your branch's history
+
+Git Worktrees
+
+Entire works seamlessly with git worktrees. Each worktree has independent session tracking, so you can run multiple AI sessions in different worktrees without conflicts.
+Concurrent Sessions
+
+Multiple AI sessions can run on the same commit. If you start a second session while another has uncommitted work, Entire warns you and tracks them separately. Both sessions' checkpoints are preserved, and a commit condenses every session with pending work in that worktree.
+Headless & CI Authentication
+
+By default entire login opens a browser to sign in and stores tokens in the OS keyring (macOS Keychain, Linux Secret Service, Windows Credential Manager). Machines without a usable browser or keyring — headless servers, containers, minimal VMs, CI runners — have two supported paths:
+Interactive login on a headless machine
+
+Sign-in itself already handles this: with no interactive terminal, or over SSH, entire login switches to the device-code flow on its own and prints an approval URL you can open on any machine. entire login --device forces that flow explicitly. Only token storage needs an override — use the file-backed store:
+
+ENTIRE_TOKEN_STORE=file entire login
+
+Tokens are written with 0600 permissions to tokens.json in your Entire config directory (~/.config/entire by default). Override the location with ENTIRE_TOKEN_STORE_PATH. Set ENTIRE_TOKEN_STORE=file persistently (e.g. in your shell profile) so later commands read from the same store.
+Non-interactive automation (CI, workload identity)
+
+Skip login and storage entirely by injecting a token per invocation:
+
+ENTIRE_TOKEN=<login-or-sa-session-JWT> entire ...
+
+ENTIRE_TOKEN bypasses stored credentials; the CLI derives the control-plane endpoint from the token itself. Nothing is written to disk. This is the right path for CI pipelines and service accounts.
+
+    Seeing save login / failed to unlock correct collection errors from entire login? That's the OS keyring being unavailable — use one of the two paths above.
+
+Commands Reference
+
+Descriptions below are the commands' own summaries. entire help always reflects the installed binary; entire agent-help is the machine-readable version agents read.
+Setup
+Command     Description
+entire enable     Enable Entire in current repository
+entire disable     Disable Entire in current repository
+entire status     Show Entire status (--json for structured output)
+entire agent     Manage agent integrations (add, remove, list)
+entire configure     Update non-agent Entire settings in the current repository
+entire doctor     Diagnose and fix session issues (trace, logs, bundle, migrate-checkpoints)
+entire clean     Clean up Entire session data (--all for repo-wide cleanup)
+entire plugin     Manage Entire plugins (see Plugins)
+Sessions & Checkpoints
+Command     Description
+entire session     Manage agent sessions (list, info, current, stop, attach, adopt, resume, tokens)
+entire session resume     Resume a stopped session — interactive picker, or by branch
+entire checkpoint     Inspect and search checkpoints (list, explain, tokens, search)
+entire checkpoint explain     Explain a checkpoint, commit, or session
+entire search     Search checkpoints, commits, and sessions using semantic and keyword matching
+entire activity     Show your activity overview
+entire recap     Summarize recent checkpoint activity
+entire dispatch     Generate a dispatch summarizing recent agent work
+Account
+Command     Description
+entire login     Log in to Entire (browser by default; --device for the device-code flow)
+entire logout     Log out of Entire
+entire auth     Manage authentication (status, contexts, use, token, login, logout)
+Control Plane
+Command     Description
+entire org     Manage Entire organizations (create, list, get, delete)
+entire project     Manage Entire projects (create, list, get, delete)
+entire repo     Manage Entire repositories (create, list, get, delete, clone, mirror, visibility)
+entire grant     Manage Entire access grants and org membership (org, project, repo)
+entire api     Make an authenticated request to an Entire API and print the response
+Other
+Command     Description
+entire agent-help     Machine-readable usage for coding agents (always matches the installed CLI)
+entire labs     Explore experimental Entire workflows
+entire version     Show build information
+Experimental Commands
+
+These are visible in developer and nightly builds and hidden in stable releases, but always runnable in every build. Run entire labs to discover them.
+Command     Description
+entire review     Run a multi-agent review against a branch
+entire investigate     Run a multi-agent investigation against the current branch
+entire tokens     Analyze token usage across sessions and checkpoints
+entire blame     Show which lines came from Entire checkpoints
+entire why     Show why a line exists
+entire experts     Rank agent provenance for code scopes
+entire import     Import pre-existing agent history into Entire
+entire runner     Set up and tune trail runners for this repository
+
+entire blame <file> shows which current file lines came from an Entire checkpoint (--long for the full agent, model, author, and session table), and entire why <file>:<line> jumps from a specific line back to the prompt, session, and checkpoint that created it.
+entire enable Flags
+Flag     Description
+--agent <name>     Agent to set up hooks for: claude-code, codex, copilot-cli, cursor, factoryai-droid, gemini, opencode, pi (external agents on $PATH also work). Enables non-interactive mode
+--yes, -y     Accept all defaults without prompting
+--force, -f     Force reinstall hooks (removes existing Entire hooks first)
+--checkpoint-remote <provider:owner/repo>     Push checkpoint data to a separate repo (e.g., github:org/checkpoints-repo)
+--skip-push-sessions     Disable automatic pushing of checkpoint data on git push
+--local     Write settings to .entire/settings.local.json instead of .entire/settings.json
+--project     Write settings to .entire/settings.json even if it already exists
+--absolute-git-hook-path     Embed the full binary path in git hooks (for GUI git clients that don't source shell profiles)
+--import-history     During first-time setup, import the selected agents' existing session history (last 30 days) without prompting
+--search-skill     Install the optional Entire search skill for the selected agent(s)
+--agent-help-skill     Install the Entire agent-help skill (points agents at entire agent-help) for the selected agent(s)
+--telemetry=false     Disable anonymous usage analytics
+
+Run in a directory that is not a git repository, entire enable offers to initialize one and (optionally) create a matching GitHub repo via the gh CLI. That path is driven by --init-repo / --no-init-repo, --no-github, --repo-name, --repo-owner, --repo-visibility, --push, --skip-initial-commit, and --initial-commit-message. See entire enable --help for the full list.
+
+Examples:
+
+# First-time setup with a specific agent
+entire enable --agent claude-code
+
+# Re-enable a disabled repo
+entire enable
+
+# Re-enable and refresh hooks
+entire enable --force
+
+# Save settings locally (not committed to git)
+entire enable --local
+
+entire enable is primarily for turning Entire on. On an unconfigured repo it will also bootstrap setup. Use entire agent for adding or removing agents, and entire configure for non-agent settings.
+entire configure
+
+Use entire configure to update non-agent settings on a repo that's already set up. Agent installation lives under entire agent.
+
+Typical uses:
+
+    Toggle telemetry
+    Reinstall the Entire git hook (--force, --absolute-git-hook-path)
+    Update strategy options such as --checkpoint-remote or --skip-push-sessions
+    Pick the provider, model, and timeout for entire checkpoint explain --generate (--summarize-provider, --summarize-model, --summarize-timeout-seconds)
+
+Examples:
+
+# Show help and the hint pointing to 'entire agent'
+entire configure
+
+# Opt out of telemetry
+entire configure --telemetry=false
+
+# Reinstall the Entire git hook with an absolute binary path
+entire configure --absolute-git-hook-path
+
+# Update strategy options on an existing repo
+entire configure --checkpoint-remote github:myorg/checkpoints-private
+
+# Choose who generates summaries
+entire configure --summarize-provider claude-code
+
+Adding or removing an agent lives under entire agent:
+
+entire agent add claude-code
+entire agent remove claude-code
+
+Plugins
+
+Plugins extend the CLI with new verbs: any executable named entire-<name> on $PATH runs as entire <name>, kubectl-style — stdio passes through, exit codes propagate, no SDK or protocol required.
+
+entire plugin search                                    # search the plugin index
+entire plugin browse                                    # browse the index interactively and install
+entire plugin install run                               # install by name (index lookup)
+entire plugin install https://github.com/you/entire-x   # install from any git host
+entire plugin install ./dist/entire-x                   # link a local build
+entire plugin list                                      # list what's installed
+entire run                                              # run an installed plugin
+entire plugin upgrade --all                             # update remote-installed plugins
+entire plugin doctor                                    # check for broken installs and missing dependencies
+entire plugin remove run
+
+Remote installs are forge-agnostic: the newest stable semver tag is resolved over the git protocol (prereleases need an explicit --pin), and the platform's release asset is downloaded over HTTPS and verified against the release's checksums.txt. A release that publishes no checksums is refused unless you pass --allow-unverified — installing means making those bytes executable. entire plugin doctor re-checks installed binaries against the digests recorded at install time. Plugins can declare dependencies on other plugins in an entire-plugin.yml; missing ones are installed after a single confirmation.
+
+Discovery uses a git-synced catalog, entireio/plugin-index by default. Organizations can point the CLI at an internal catalog with the ENTIRE_PLUGIN_INDEX_URL environment variable or --index. It is deliberately not settable from a repository's committed settings: an index-listed plugin installs without a prompt, so a checked-out repo must not be able to choose the catalog.
+
+For the full contract — resolution rules, environment filtering, release-asset conventions, and how to author a plugin — see External Commands.
+Configuration
+
+Entire uses two configuration files in the .entire/ directory:
+settings.json (Project Settings)
+
+Shared across the team, typically committed to git. This is what entire enable writes for a new repo:
+
+{
+  "enabled": true,
+  "checkpoints": {
+    "primary": { "type": "git-refs" }
+  }
+}
+
+settings.local.json (Local Settings)
+
+Personal overrides, gitignored by default:
+
+{
+  "enabled": false,
+  "log_level": "debug"
+}
+
+Configuration Options
+Option     Values     Description
+enabled     true, false     Enable/disable Entire
+log_level     debug, info, warn, error     Logging verbosity
+checkpoints.primary.type     git-refs     Checkpoint storage backend — written by entire enable, see Checkpoint Storage
+telemetry     true, false     Send anonymous usage statistics to Posthog
+absolute_git_hook_path     true, false     Embed the full binary path in git hooks, for GUI git clients that don't source shell profiles
+commit_linking     always, prompt     Link commits to sessions automatically, or ask each time (default prompt)
+sign_checkpoint_commits     true, false     Sign checkpoint commits (default: on). See checkpoint signing
+strategy_options.push_sessions     true, false     Auto-push checkpoint data on git push (default true)
+strategy_options.checkpoint_remote     {"provider": "github", "repo": "org/repo"}     Push checkpoint data to a separate repo (see below)
+strategy_options.checkpoint_push_remote     remote name, e.g. "upstream"     Pin which single remote carries checkpoint data (see below)
+strategy_options.filtered_fetches     true, false     Use --filter=blob:none on checkpoint fetches
+strategy_options.summarize.enabled     true, false     Auto-generate AI summaries at commit time
+summary_generation.provider     e.g. claude-code, codex, gemini     Which agent generates summaries (defaults to Claude)
+summary_generation.model     provider-specific model hint     Model hint for summary generation (requires provider)
+summary_timeout_seconds     seconds     Hard deadline for entire checkpoint explain --generate. Unset or 0 means no deadline
+redaction.*     nested object     PII redaction, custom secret patterns, scanner engines, and the OpenAI Privacy Filter — documented in docs/security-and-privacy.md
+Agent Hook Configuration
+
+Each agent stores its hook configuration in its own directory. When you run entire enable, hooks are installed in the appropriate location for each selected agent:
+Agent     Hook Location     Format
+Claude Code     .claude/settings.json     JSON hooks config
+Codex     .codex/hooks.json     JSON hooks config
+Copilot CLI     .github/hooks/entire.json     JSON hooks config
+Cursor     .cursor/hooks.json     JSON hooks config
+Factory AI Droid     .factory/settings.json     JSON hooks config
+Gemini CLI     .gemini/settings.json     JSON hooks config
+OpenCode     .opencode/plugins/entire.ts     TypeScript plugin
+Pi     .pi/extensions/entire/index.ts     TypeScript extension
+
+You can enable multiple agents at the same time — each agent's hooks are independent. Entire detects which agents are active by checking for installed hooks, not by a setting in settings.json.
+Checkpoint Remote
+
+By default, checkpoint data rides along with your own pushes — but only to one remote, the elected checkpoint sync remote. Entire picks it in this order:
+
+    strategy_options.checkpoint_push_remote, if set. This is fail-closed: if it names a remote that isn't configured, checkpoints don't sync.
+    A remote captured from your own habits: the first push whose target matches the branch's declared push destination elects that remote, announces it on stderr, and carries the checkpoints. The first capture sticks.
+    origin
+    The sole remote, if the repo has exactly one
+    The first remote in .git/config order
+
+A push to any other remote carries no checkpoint data. entire status shows the current destination, where it came from, and how many checkpoints are unpushed. This matters if you push code to several remotes: checkpoints go to exactly one of them.
+
+If instead you want checkpoint data in a separate repo (e.g., a private repo for a public project), configure checkpoint_remote with a structured provider and repo. A dedicated checkpoint_remote is addressed directly and is exempt from the single-remote election above:
+
+{
+  "strategy_options": {
+    "checkpoint_remote": {
+      "provider": "github",
+      "repo": "myorg/checkpoints-private"
+    }
+  }
+}
+
+Or via the CLI:
+
+entire enable --checkpoint-remote github:myorg/checkpoints-private
+
+Entire derives the git URL automatically using the same protocol (SSH or HTTPS) as your push remote. It will:
+
+    Fetch existing checkpoint data locally if the remote has it and you don't (one-time)
+    Push checkpoint data to the checkpoint repo instead of your default push remote
+    Ignore the setting if it looks inherited rather than yours, and fall back to origin (or, failing that, the remote you are pushing to). checkpoint_remote is normally committed in .entire/settings.json, so cloning or forking a project inherits it — without this, a contributor's session data would be pushed into the upstream project's checkpoint repo. A setting is treated as yours when it lives in the gitignored .entire/settings.local.json, or when your origin and every push URL of the remote you are pushing to are owned by the same account or org as the checkpoint repo. Requiring the push destination too covers contributors who cloned the upstream repo and added their own fork, where origin belongs to the upstream project rather than to them; requiring every push URL covers mirror-style remotes that fan out to several repositories
+    If your checkpoint repo is owned by a different account or org than origin, configure it in .entire/settings.local.json so it is always honored
+    If the remote is unreachable, warn and continue without blocking your main push
+
+ENTIRE_CHECKPOINT_TOKEN
+
+ENTIRE_CHECKPOINT_TOKEN allows you to provide a dedicated token for checkpoint repository operations, without modifying the credentials used for your primary repository.
+
+When this environment variable is set, Entire behaves as follows:
+
+    Injects the token into HTTPS Git operations used for checkpoint fetch and push
+    If checkpoint_remote is configured:
+        Prefers an HTTPS URL for the checkpoint remote when a token is present, even if the repository’s origin uses SSH
+    If checkpoint_remote is not configured:
+        Falls back to using the default origin remote
+    If checkpoint_remote configuration cannot be loaded:
+        Falls back to origin
+        If origin is a valid SSH or HTTPS Git remote, Entire converts it to an HTTPS URL to enable token-based authentication
+
+Auto-Summarization
+
+When enabled, Entire automatically generates AI summaries for checkpoints at commit time. Summaries capture intent, outcome, learnings, friction points, and open items from the session.
+
+{
+  "strategy_options": {
+    "summarize": {
+      "enabled": true
+    }
+  }
+}
+
+Summaries are also generated on demand, with or without this setting, by entire checkpoint explain --generate.
+
+Which agent writes them. By default Claude Code (claude on your PATH, model sonnet). Set a different one with summary_generation.provider — claude-code, codex, copilot-cli, cursor, gemini, or pi, plus an optional summary_generation.model hint:
+
+entire configure --summarize-provider codex
+
+opencode and factoryai-droid cannot generate summaries. Whichever provider you pick must be installed and authenticated.
+
+Requirements:
+
+    The configured provider's CLI installed and authenticated
+    Summary generation is non-blocking: failures are logged but don't prevent commits
+
+Settings Priority
+
+Local settings override project settings field-by-field. entire status --detailed shows the state of each settings file.
+
+Two exceptions to field-by-field merging:
+
+    The checkpoints block is replaced wholesale by the local one, not deep-merged — it selects a backend, so a half-merged block would be meaningless.
+    A settings.local.json that is tracked in git is ignored entirely, and Entire tells you to git rm --cached it. .gitignore doesn't apply to an already-tracked path, so a committed local file would otherwise override project settings for everyone who clones.
+
+Agent-Specific Steps & Limitations
+
+    Codex hooks are enabled by default (codex-cli 0.124.0+), so enabling Entire for Codex only installs .codex/hooks.json — no config.toml is needed and Entire never creates one. If an older Entire version left a .codex/config.toml behind and your repo lives inside ~/.codex/agents, delete that file to stop Codex's "malformed agent role definition" startup warning.
+    Entire supports Cursor IDE and Cursor Agent CLI tool. Commands (doctor, status etc.) work the same as all other agents.
+    Entire supports Copilot CLI, but not Copilot in VS Code, in other IDEs, or on github.com.
+    Entire supports Pi coding agent (Preview). Pi uses a TypeScript extension instead of a JSON hook config. Subagent capture is not currently available.
+
+Security & Privacy
+
+Your session transcripts are stored in your git repository, in the per-checkpoint refs described above. If your repository is public, this data is visible to anyone.
+
+Entire automatically redacts detected secrets (API keys, tokens, credentials) from transcripts and metadata before writing a checkpoint, but redaction is best-effort.
+
+The temporary shadow branches used during a session get the same redaction for transcripts and metadata, but their code-file snapshots are raw blobs of your working tree, so a secret hardcoded in your source appears unredacted there. Entire never pushes shadow branches — don't push them manually. See docs/security-and-privacy.md for the full picture, including the configurable scanner layers, opt-in PII redaction, and the OpenAI Privacy Filter pass.
+Troubleshooting
+Common Issues
+Issue     Solution
+"Not a git repository"     Navigate to a Git repository first
+"Entire is disabled"     Run entire enable
+A session stuck ACTIVE, or leftover session state     Run entire doctor, then entire clean --force if it persists
+Anything else     Run entire doctor; entire doctor bundle produces a redacted diagnostic bundle for a bug report
+Debug Mode
+
+# Via environment variable
+ENTIRE_LOG_LEVEL=debug entire status
+
+# Or via settings.local.json
+{
+  "log_level": "debug"
+}
+
+Cleaning Up State
+
+# Clean session data for current commit
+entire clean --force
+
+# Clean all orphaned data across the repository
+entire clean --all --force
+
+# Disable and re-enable
+entire disable && entire enable --force
+
+Accessibility
+
+For screen reader users, enable accessible mode:
+
+export ACCESSIBLE=1
+entire enable
+
+This uses simpler text prompts instead of interactive TUI elements.
+Development
+
+This project uses mise for task automation and dependency management.
+Prerequisites
+
+    mise - Install with curl https://mise.run | sh
+
+Getting Started
+
+# Clone the repository
+git clone <repo-url>
+cd cli
+
+# Install dependencies (including Go)
+mise install
+
+# Trust the mise configuration (required on first setup)
+mise trust
+
+# Build the CLI
+mise run build
+
+Dev Container
+
+The repo includes a .devcontainer/ configuration that installs the system packages used by local development and CI (git, tmux, gnome-keyring, etc) and then bootstraps the repo's mise toolchain.
+
+Open the folder in a Dev Container, or start it from the devcontainer CLI as follows:
+
+devcontainer up --workspace-folder .
+devcontainer exec --workspace-folder . bash -lc '.devcontainer/run-with-keyring.sh'
+
+The container's postCreateCommand runs .devcontainer/post-create.sh, which does mise trust --yes && mise install, so Go, golangci-lint, gotestsum, shellcheck, and the canary E2E helper binaries are ready after creation. Use .devcontainer/run-with-keyring.sh <command> for commands that touch the Linux keyring, including mise run test:ci.
+
+If ENTIRE_DEVCONTAINER_KEYRING_PASSWORD is set in the environment, .devcontainer/run-with-keyring.sh uses that value to unlock the keyring non-interactively. If it is unset, the script generates a random password for the session automatically.
+Common Tasks
+
+# Run tests
+mise run test
+
+# Run integration tests
+mise run test:integration
+
+# Run all tests: unit + integration under -race, then the E2E canary
+mise run test:ci
+
+# Lint the code
+mise run lint
+
+# Format the code
+mise run fmt
+
+Local Device Auth Testing
+
+If you're working on the CLI login flow against a locally running Entire API, use the smoke script. It defaults to http://localhost:8787 for both the data API and the login server, and passes the hidden --insecure-http-auth flag that a plain-HTTP login server requires:
+
+./scripts/local-device-auth-smoke.sh
+
+Override either endpoint with ENTIRE_API_BASE_URL and ENTIRE_LOGIN_SERVER:
+
+ENTIRE_LOGIN_SERVER=http://localhost:8180 ./scripts/local-device-auth-smoke.sh
+
+The script starts a login, opens the approval URL, waits for the CLI to finish, and then verifies a matching context was written to contexts.json.
+
+To drive the flow by hand, or to run the focused integration coverage:
+
+# Login against a local server (--device forces the device-code flow)
+go run ./cmd/entire login --server http://localhost:8787 --insecure-http-auth --device
+
+# Focused integration coverage for login
+go test -tags=integration ./cmd/entire/cli/integration_test -run TestLogin
+
+Getting Help
+
+entire --help              # General help
+entire <command> --help    # Command-specific help
+
+    GitHub Issues: Report bugs or request features at https://github.com/entireio/cli/issues
+    Contributing: See CONTRIBUTING.md for guidelines
+
+License
+
+MIT License - see LICENSE for details.
+About
+
+📜 Entire CLI hooks into your Git workflow to capture AI agent sessions as you work. Sessions are indexed alongside commits, creating a searchable record of how code was written in your repo.
+entire.io
+Resources
+Readme
+License
+Code of conduct
+Code of conduct
+Contributing
+Contributing
+Security policy
+Security policy
+Activity
+Stars
+0 stars
+Watchers
+0 watching
+Forks
+0 forks
+Releases
+182tags
+Create a new release
+Packages
+No packages published
+Publish your first package
+Contributors
+No contributors
+Languages
+
+    Go98.3%Other1.7%
+
+Suggested workflows
+
+Based on your tech stack
+
+    Go logo
+    GoBuild a Go project.By GitHub Actions
+    SLSA Generic generator logo
+    SLSA Generic generatorGenerate SLSA3 provenance for your existing release workflowsBy Open Source Security Foundation (OpenSSF)
+    SLSA Go releaser logo
+    SLSA Go releaserCompile your Go project using a SLSA3 compliant builderBy Open Source Security Foundation (OpenSSF)
+
+More workflows
