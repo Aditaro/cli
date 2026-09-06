@@ -10,14 +10,16 @@ Database migrations fail in production regularly, and when they do, the standard
 **Track 1 — Checkpoint-Native Developer Experience.** The healing decision is checkpoint-driven, not just checkpoint-logged: when a migration fails, Warden doesn't merely time-travel the Delta table back — it reads the pre-migration checkpoint's recorded intent to explain *why* the migration was attempted and what should have happened, then surfaces that alongside the rollback. Without the checkpoint, there is a revert with no explanation; with it, there is a recovery with reasoning. Entire Graph runs an impact analysis before the migration lands, so the blast radius is known before the risk is taken, not just after.
 
 ## Architecture and main workflow
-1. `warden migrate <migration.sql>`:
-   a. Write a pre-migration Entire checkpoint: intent (what's changing, why), files/schema touched.
+1. `warden migrate <migration.sql> --validate-sql <check.sql>`:
+   a. Read the most recent Entire checkpoint's recorded intent (what's changing, why) via `entire checkpoint explain`.
    b. Run `entire graph impact --repo . --symbol <affected>` for a relationship/impact check before the change lands.
    c. Apply the migration to a Databricks Delta table.
-   d. Run a validation check (schema/data-quality assertion).
-   e. On failure: `RESTORE TABLE ... TO VERSION AS OF <n>` (Delta time-travel) to roll back, then read the pre-migration checkpoint's intent to generate a human-readable explanation of what was attempted and why it failed.
-   f. Record the full attempt → failure → heal trail as a new Entire checkpoint.
-2. Databricks is the substrate the whole mechanic depends on: Delta Lake's native versioning is the rollback primitive, and a SQL dashboard visualizes migration attempts/heals over time.
+   d. Run the supplied validation query as a second, independent check.
+   e. On failure at either step: `RESTORE TABLE ... TO VERSION AS OF <n>` (Delta time-travel) to roll back, then use the checkpoint's recorded intent to generate a human-readable explanation of what was attempted and why it failed.
+   f. Log the attempt (applied/healed/failed) to `warden.migration_log`, with the raw checkpoint intent and full error text kept local-only (see Security).
+2. Databricks is the substrate the whole mechanic depends on: Delta Lake's native versioning is the rollback primitive, and a Lakeview dashboard visualizes migration attempts/heals over time.
+
+**Verified live which check actually fires (not assumed):** the demo migration adds a Delta `CHECK` constraint (`ALTER TABLE ... ADD CONSTRAINT ... CHECK (plan IN (...))`), and Delta validates *existing* data at `ADD CONSTRAINT` time. Against the live warehouse, that ALTER TABLE step itself throws on the seeded offending row (`plan='legacy'`) — the separate `001_validate.sql` SELECT step (d above) is never reached in practice for this particular migration, because Delta's own constraint mechanism is stricter and catches the problem first. Warden's healing logic (step e) is correctly written to catch a failure from *either* source — the ALTER TABLE or the validation SELECT — since not every migration will use a Delta `CHECK` constraint the way this demo does; this one just happens to fail at the earlier point. This was confirmed by a real run, not inferred: see the Checkpoint links section.
 
 Build split: Claude Code drives the core Warden CLI and checkpoint logic; opencode/Codex build the Databricks Delta table setup, synthetic seed data, and dashboard in parallel, coordinated via `TASKS.md`.
 
@@ -49,7 +51,8 @@ external log note.
 
 **Already true today, not aspirational:**
 - **No secrets ever touch the repo or an external service.** `DATABRICKS_SERVER_HOSTNAME`/`HTTP_PATH`/`TOKEN` are read from env vars only (`warden/migrate.py::connect()`), sourced from a gitignored `.env`; the connector fails closed with a clear error if any are missing, and nothing in the codebase reads or prints `.env` itself.
-- **Checkpoint intent has a hard local/external boundary** (today's curveball work): the full recorded intent is only ever printed to the operator's own console. What reaches Databricks — an external service outside Entire's own trust boundary — is a sanitized summary, the checkpoint ID, and an explicit `context_completeness` label (`complete`/`redacted`/`unavailable`), so a partially-redacted checkpoint can never be mistaken for authoritative context downstream.
+- **Checkpoint intent has a hard, structurally-enforced local/external boundary** (curveball work, hardened same-session): recorded intent is wrapped in `LocalOnlyText`, whose default `str()`/`repr()` return a redaction placeholder rather than the real text — the real text is reachable only through one explicit `.reveal()` call, at the two genuinely local-only console-print sites. A future call site that carelessly interpolates the wrapper into a string bound for Databricks gets the placeholder, not a leak — this is a property of the type, not just a convention checked by review. What actually reaches Databricks is a sanitized summary, the checkpoint ID, and an explicit `context_completeness` label (`complete`/`redacted`/`unavailable`), so a partially-redacted checkpoint can never be mistaken for authoritative context downstream.
+- **The same boundary covers database error text, not just checkpoint intent.** Reviewing the curveball fix surfaced a second leak of the identical shape: Delta's own `CHECK`-constraint violation message embeds the offending row's actual column values (`DELTA_VIOLATE_CONSTRAINT_WITH_VALUES`), so forwarding a raw exception's text to `migration_log` would leak table data through a different door than the one the curveball closed. `error_summary()` reduces any exception to its type name (e.g. `ValueError`) before it crosses the external-service boundary; the full message still prints locally for operator triage. Confirmed live: the logged row's note contains no row values, only the type name.
 - **Warden inherits Entire's own checkpoint-security substrate**, rather than re-implementing it: transcripts are redacted before they're ever written to a checkpoint (regex + entropy scanners, with an optional OpenAI Privacy Filter layer), the `.entire` directory refuses to operate through a symlink (so a malicious repo can't redirect where checkpoint data is read from or written to), and exec-bearing settings (like a custom redaction command) are only ever honored from an untracked, developer-local file — never from anything a pull request could commit. Warden's checkpoint reads (`entire checkpoint list/explain`) sit on top of all of this for free.
 
 **Where this goes next if we had more time (credible, not built):**
@@ -65,7 +68,9 @@ external log note.
 - **Multi-agent build** (`11525915f`, `8e089315f`) — opencode's Databricks infra, Codex's migration scenario, each with their own `Entire-Checkpoint` trailer.
 - **Real bugs found and fixed against the live warehouse** (`874f4a0e7`) — proves the loop was actually run, not just written: `uuid()` inline-table bug, graph impact profile/timeout fix.
 - **Demo runner** (`50ffe776c`) — one-command live demo flow.
-- **Pre-noon stable state** — this commit. See below for the required intent/architecture/risk summary.
+- **Pre-noon stable state** (`b8c9fe619`) — required intent/architecture/risk summary before the curveball.
+- **Privacy boundary + hardening** (`cc16573cc`, `1784305b7`) — the curveball fix (`context_completeness`, local-only intent) plus a same-session follow-up that closed a second leak of the same shape (raw DB exception text reduced to its type name before crossing the external boundary) and made the intent boundary structural (`LocalOnlyText`) rather than convention-only.
+- **Post-curveball live verification + Lakeview dashboard** (`7274590b7`) — Codex confirmed live which failure path actually fires (Delta's `ADD CONSTRAINT` validation, not the manual SELECT — see Architecture) and shipped a real dashboard object via the Lakeview API.
 
 ## Setup, run and test instructions
 ```
@@ -92,7 +97,7 @@ python3 -m pytest warden/ databricks/ -q
 ```
 
 ## Databricks use, data sources and limitations
-Free Edition, one 2X-Small SQL warehouse, one Delta table for the demo migration target, synthetic/clearly-labeled seed data only. Delta time-travel is the rollback mechanism — this is why Databricks is essential, not incidental.
+Free Edition, one 2X-Small SQL warehouse, one Delta table for the demo migration target, synthetic/clearly-labeled seed data only. Delta time-travel (`RESTORE TABLE ... TO VERSION AS OF`) is the rollback mechanism, and Delta's own `CHECK` constraint enforcement is what actually catches the demo's seeded bad row — both are load-bearing, not decorative. Migration attempts/heals are visualized in a real Lakeview dashboard object in the workspace (created via `databricks/create_dashboard.py` against the Lakeview REST API, not just a stub query file): [Warden Migration Health](https://dbc-89334694-0d5f.cloud.databricks.com/dashboardsv3/01f1a9c471e5137fba57a227f9b91452).
 
 ## Known limitations and next steps
 
