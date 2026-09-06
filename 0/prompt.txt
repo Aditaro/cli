@@ -1,0 +1,6 @@
+Still in flight with Codex (from the same approved batch):
+3. Fresh-session checkpoint reconstruction test — give a genuinely fresh session only a checkpoint ID, see if it can actually reconstruct and continue
+4. No-credentials demo/self-test path
+5. Final live regression + dashboard check (do this last, right before submission)
+
+do these adn the things that are still required from you in still outstanding
