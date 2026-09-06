@@ -1,0 +1,93 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TYPGMW4X2ZKXC3AEV5V568",
+  "session_id": "a67113eb-8bf5-4f12-a894-98e2726c95df",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T08:52:30.892725302Z",
+  "branch": "handoff",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "a41636ae1123",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 370,
+    "cache_creation_tokens": 1540209,
+    "cache_read_tokens": 42049170,
+    "output_tokens": 144972,
+    "api_call_count": 185
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01HoRN3TQ7kBEyn6cRwKpfxJ",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:brainstorming"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "803eec8090fc",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 451,
+        "end": 452,
+        "entry_ids": [
+          "b6cffff7-333b-41ae-a4b9-3bab7a060177"
+        ],
+        "tool_use_id": "toolu_01HoRN3TQ7kBEyn6cRwKpfxJ"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01HoRN3TQ7kBEyn6cRwKpfxJ"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:brainstorming",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 774,
+      "user_lines_removed": 86,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".gemini/agents/test-doc.md": 26,
+        ".opencode/package-lock.json": 95,
+        "BUILDATHON.md": 26,
+        "TASKS.md": 47,
+        "databricks/seed.py": 23,
+        "databricks/setup.sql": 11,
+        "migrations/002_add_migration_marker.sql": 7,
+        "migrations/002_validate.sql": 4,
+        "migrations/README.md": 6,
+        "warden/health_report.py": 137,
+        "warden/orchestrate.py": 193,
+        "warden/test_health_report.py": 77,
+        "warden/test_orchestrate.py": 96,
+        "warden/test_scenarios.py": 26
+      },
+      "user_removed_per_file": {
+        ".gemini/agents/dev.md": 1,
+        ".gemini/agents/reviewer.md": 1,
+        ".gemini/agents/test-doc.md": 2,
+        ".opencode/package-lock.json": 72,
+        "BUILDATHON.md": 7,
+        "databricks/seed.py": 2,
+        "databricks/setup.sql": 1
+      }
+    }
+  ]
+}
