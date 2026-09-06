@@ -107,6 +107,33 @@ Then also run `python3 -m pytest warden/ databricks/ -q` (all tests, both dirs).
   version, runs the migration/validation flow, prints the latest migration log,
   and prints the post-migration version. It treats exit code 1 as the expected
   validation/heal result and never reads or prints `.env` or credentials.
+- **opencode:** Added `databricks/test_integration.py` — pytest, live-warehouse,
+  `-v` **3 passed** (29s) against the confirmed-working creds (from `.env`,
+  sourced in the invoking shell; the file never reads/prints `.env`):
+  - `test_demo_users_has_exactly_50_rows` — `COUNT(*)` on `warden.demo_users` == 50.
+  - `test_validate_finds_exactly_one_offender` — runs `migrations/001_validate.sql`
+    verbatim; exactly 1 row returned, `plan == 'legacy'`.
+  - `test_migration_log_queryable` — `CREATE IF NOT EXISTS` (same DDL as
+    `warden/migrate.py::ensure_log_table`, verified via `entire graph search`)
+    then a `SELECT COUNT(*)` so it only asserts queryability, not rows.
+  - Skips (not fails) when the 3 env vars or the connector are missing
+    (verified: `3 skipped` in 0.01s with env unset), so it's safe to run
+    anywhere. Also tested `python3 -m pytest databricks/test_integration.py -q`.
+- **Codex (pre-noon freeze verification):** Ran the requested live demo with
+  `set -a; source .env; set +a; bash warden/demo.sh`. Full output before the
+  Databricks connector stalled:
+  ```text
+  === Pre-migration Delta version ===
+  ```
+  The first `DESCRIBE HISTORY` query produced no further output and was
+  interrupted after the connector timeout window; no credential text was
+  printed. The requested all-tests command completed:
+  ```text
+  ......sss                                                                [100%]
+  6 passed, 3 skipped in 0.04s
+  ```
+  This is an environment/connectivity blocker for the live demo, not a code
+  change; no fixes were made per the freeze instruction.
 
 ## Blocked / open questions
 _(none yet)_
