@@ -1,0 +1,287 @@
+{
+  "info": {
+    "id": "ses_f8a8e18a8ffeHcF3NPSais9XfV",
+    "slug": "quiet-squid",
+    "projectID": "f0f4ded9e006fb1576a070de2790bb5888a94b76",
+    "directory": "/home/adit/Desktop/Coding/BTW_Buildathon",
+    "path": "",
+    "title": "New session - 2026-09-06T06:39:54.199Z",
+    "agent": "build",
+    "model": {
+      "id": "auto",
+      "providerID": "omniroute"
+    },
+    "version": "1.18.29",
+    "summary": {
+      "additions": 0,
+      "deletions": 0,
+      "files": 0
+    },
+    "cost": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "reasoning": 0,
+      "cache": {
+        "read": 0,
+        "write": 0
+      }
+    },
+    "time": {
+      "created": 1788676794199,
+      "updated": 1788677214307
+    }
+  },
+  "messages": [
+    {
+      "info": {
+        "role": "user",
+        "time": {
+          "created": 1788676794246
+        },
+        "agent": "build",
+        "model": {
+          "providerID": "omniroute",
+          "modelID": "auto"
+        },
+        "summary": {
+          "diffs": []
+        },
+        "id": "msg_07571e786001FMWuSbpyAEk4Gi",
+        "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV"
+      },
+      "parts": [
+        {
+          "type": "text",
+          "text": "Read TASKS.md — there's a \"NOON CURVEBALL\" section at the bottom with your\nfirst task. Before doing anything else, run:\n  entire checkpoint explain 0d29a022c\nto reconstruct intent, architecture, completed work, and open risks. Do not\nrely on anything except that checkpoint and the repo files. ",
+          "id": "prt_07571e78c0017oEWgZDHi6zKLC",
+          "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV",
+          "messageID": "msg_07571e786001FMWuSbpyAEk4Gi"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_07571e786001FMWuSbpyAEk4Gi",
+        "role": "assistant",
+        "mode": "build",
+        "agent": "build",
+        "path": {
+          "cwd": "/home/adit/Desktop/Coding/BTW_Buildathon",
+          "root": "/home/adit/Desktop/Coding/BTW_Buildathon"
+        },
+        "cost": 0,
+        "tokens": {
+          "input": 0,
+          "output": 0,
+          "reasoning": 0,
+          "cache": {
+            "read": 0,
+            "write": 0
+          }
+        },
+        "modelID": "auto",
+        "providerID": "omniroute",
+        "time": {
+          "created": 1788676794642,
+          "completed": 1788676875911
+        },
+        "error": {
+          "name": "APIError",
+          "data": {
+            "message": "Internal Server Error: Internal Server Error",
+            "statusCode": 500,
+            "isRetryable": true,
+            "responseHeaders": {
+              "connection": "keep-alive",
+              "date": "Sun, 06 Sep 2026 06:41:10 GMT",
+              "keep-alive": "timeout=5",
+              "transfer-encoding": "chunked"
+            },
+            "responseBody": "Internal Server Error",
+            "metadata": {
+              "url": "http://localhost:20128/v1/chat/completions"
+            }
+          }
+        },
+        "id": "msg_07571e91200174Az07YvlRkYMv",
+        "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV"
+      },
+      "parts": []
+    },
+    {
+      "info": {
+        "role": "user",
+        "time": {
+          "created": 1788677126233
+        },
+        "agent": "build",
+        "model": {
+          "providerID": "omniroute",
+          "modelID": "auto"
+        },
+        "summary": {
+          "diffs": []
+        },
+        "id": "msg_07576f859001S7SnoOblks4JRF",
+        "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV"
+      },
+      "parts": [
+        {
+          "type": "text",
+          "text": "cotninue",
+          "id": "prt_07576f85f001JAyqnIcYkBNgK9",
+          "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV",
+          "messageID": "msg_07576f859001S7SnoOblks4JRF"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_07576f859001S7SnoOblks4JRF",
+        "role": "assistant",
+        "mode": "build",
+        "agent": "build",
+        "path": {
+          "cwd": "/home/adit/Desktop/Coding/BTW_Buildathon",
+          "root": "/home/adit/Desktop/Coding/BTW_Buildathon"
+        },
+        "cost": 0,
+        "tokens": {
+          "input": 0,
+          "output": 0,
+          "reasoning": 0,
+          "cache": {
+            "read": 0,
+            "write": 0
+          }
+        },
+        "modelID": "auto",
+        "providerID": "omniroute",
+        "time": {
+          "created": 1788677127263,
+          "completed": 1788677202872
+        },
+        "error": {
+          "name": "APIError",
+          "data": {
+            "message": "Internal Server Error: Internal Server Error",
+            "statusCode": 500,
+            "isRetryable": true,
+            "responseHeaders": {
+              "connection": "keep-alive",
+              "date": "Sun, 06 Sep 2026 06:46:41 GMT",
+              "keep-alive": "timeout=5",
+              "transfer-encoding": "chunked"
+            },
+            "responseBody": "Internal Server Error",
+            "metadata": {
+              "url": "http://localhost:20128/v1/chat/completions"
+            }
+          }
+        },
+        "id": "msg_07576fc5f0014mTDhrs34opXCa",
+        "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV"
+      },
+      "parts": [
+        {
+          "type": "patch",
+          "hash": "5fb5cb3e0ec2771b3b7e527f53e3836d1eea2afa",
+          "files": [
+            "/home/adit/Desktop/Coding/BTW_Buildathon/BUILDATHON.md"
+          ],
+          "id": "prt_0757823b4001kQIlAT6bwilUwr",
+          "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV",
+          "messageID": "msg_07576fc5f0014mTDhrs34opXCa"
+        }
+      ]
+    },
+    {
+      "info": {
+        "role": "user",
+        "time": {
+          "created": 1788677213885
+        },
+        "agent": "build",
+        "model": {
+          "providerID": "omniroute",
+          "modelID": "auto"
+        },
+        "summary": {
+          "diffs": []
+        },
+        "id": "msg_075784ebd001dbwBWje7rQb9Ks",
+        "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV"
+      },
+      "parts": [
+        {
+          "type": "text",
+          "text": "continue",
+          "id": "prt_075784ebf001rCMsyGePxXjI7f",
+          "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV",
+          "messageID": "msg_075784ebd001dbwBWje7rQb9Ks"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_075784ebd001dbwBWje7rQb9Ks",
+        "role": "assistant",
+        "mode": "build",
+        "agent": "build",
+        "path": {
+          "cwd": "/home/adit/Desktop/Coding/BTW_Buildathon",
+          "root": "/home/adit/Desktop/Coding/BTW_Buildathon"
+        },
+        "cost": 0,
+        "tokens": {
+          "input": 0,
+          "output": 0,
+          "reasoning": 0,
+          "cache": {
+            "read": 0,
+            "write": 0
+          }
+        },
+        "modelID": "auto",
+        "providerID": "omniroute",
+        "time": {
+          "created": 1788677214251,
+          "completed": 1788677284283
+        },
+        "error": {
+          "name": "APIError",
+          "data": {
+            "message": "Internal Server Error: Internal Server Error",
+            "statusCode": 500,
+            "isRetryable": true,
+            "responseHeaders": {
+              "connection": "keep-alive",
+              "date": "Sun, 06 Sep 2026 06:48:02 GMT",
+              "keep-alive": "timeout=5",
+              "transfer-encoding": "chunked"
+            },
+            "responseBody": "Internal Server Error",
+            "metadata": {
+              "url": "http://localhost:20128/v1/chat/completions"
+            }
+          }
+        },
+        "id": "msg_07578502b001xgPnxhekKe6KET",
+        "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV"
+      },
+      "parts": [
+        {
+          "type": "patch",
+          "hash": "9ab5b4ba0caa8eaf7b117834b97c6b4197c687af",
+          "files": [
+            "/home/adit/Desktop/Coding/BTW_Buildathon/TASKS.md"
+          ],
+          "id": "prt_0757961b8001dG3kGv82Asyh9j",
+          "sessionID": "ses_f8a8e18a8ffeHcF3NPSais9XfV",
+          "messageID": "msg_07578502b001xgPnxhekKe6KET"
+        }
+      ]
+    }
+  ]
+}

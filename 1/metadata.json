@@ -1,0 +1,61 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TQJW560GMETAVWPCPV9DDV",
+  "session_id": "ses_f8a8e18a8ffeHcF3NPSais9XfV",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T06:48:10.360506412Z",
+  "branch": "handoff",
+  "checkpoints_count": 6,
+  "save_step_count": 2,
+  "files_touched": [
+    "TASKS.md"
+  ],
+  "agent": "OpenCode",
+  "model": "auto",
+  "turn_id": "6caac93fd48e",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 3
+  },
+  "session_metrics": {
+    "turn_count": 6
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-06T06:48:10.358308625Z",
+    "agent_lines": 23,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 23,
+    "total_lines_changed": 23,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 95,
+      "user_lines_removed": 72,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".opencode/package-lock.json": 95
+      },
+      "user_removed_per_file": {
+        ".opencode/package-lock.json": 72
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
