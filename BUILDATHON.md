@@ -22,19 +22,66 @@ Database migrations fail in production regularly, and when they do, the standard
 Build split: Claude Code drives the core Warden CLI and checkpoint logic; opencode/Codex build the Databricks Delta table setup, synthetic seed data, and dashboard in parallel, coordinated via `TASKS.md`.
 
 ## Entire Graph findings and verification
-_(to fill in during the build — impact analysis before the demo migration, plus the final semantic diff)_
+Ran `entire graph impact --repo . --symbol demo_users --head --profile fast` before the demo migration landed (impact analysis before a high-risk change, as required). Real, verified output — not asserted as fact, shown with its own evidence:
+```
+Index: cache-miss (26413ms) | Query: 16ms | Total: 26429ms
+Completeness: no parse failures in SQL (4 files parsed); 1 elsewhere (JSON 1) cannot affect this answer
+IMPACT DEGENERATE: warden.demo_users has no callers, callees or type consumers
+```
+This is the correct, honest answer: `demo_users` is a newly-introduced symbol, so it genuinely has no code dependents yet. Warden shows this evidence to the operator rather than silently skipping the check — `graph_impact()` degrades to an explicit "(graph impact unavailable: ...)" string on timeout/error instead of hiding the failure, per the guide's own warning that graph output is evidence, not fact. Final semantic diff to be captured at submission time from the last commit's `entire graph diff` / `entire graph commit`.
 
 ## Noon Curveball: what changed and how we adapted
 _(to fill in at/after 12:00)_
 
 ## Checkpoint links and what each checkpoint proves
-_(to fill in — includes the pivot checkpoint recording the move from the original "Handoff" concept to Warden, and why)_
+- **Initial understanding** (`28dcc3fee`) — original architecture (Handoff), before the pivot.
+- **Pivot** (`666631970`) — rejected Handoff, chose Warden, with the rubric-based reasoning recorded.
+- **Core implementation** (`68001846c`, `ed612f27c`) — checkpoint-driven migration guard + unit tests.
+- **Multi-agent build** (`11525915f`, `8e089315f`) — opencode's Databricks infra, Codex's migration scenario, each with their own `Entire-Checkpoint` trailer.
+- **Real bugs found and fixed against the live warehouse** (`874f4a0e7`) — proves the loop was actually run, not just written: `uuid()` inline-table bug, graph impact profile/timeout fix.
+- **Demo runner** (`50ffe776c`) — one-command live demo flow.
+- **Pre-noon stable state** — this commit. See below for the required intent/architecture/risk summary.
 
 ## Setup, run and test instructions
-_(to fill in once Warden's CLI exists)_
+```
+# 1. Entire (already set up in this fork)
+entire login
+entire enable -y --agent claude-code   # or codex / opencode
+entire plugin install graph && entire graph init-agents --repo .
+
+# 2. Databricks credentials (gitignored .env, never commit)
+echo 'DATABRICKS_SERVER_HOSTNAME=...' >> .env
+echo 'DATABRICKS_HTTP_PATH=...' >> .env
+echo 'DATABRICKS_TOKEN=...' >> .env
+set -a; source .env; set +a
+
+# 3. Provision the demo table + synthetic seed data
+python3 -c "from databricks import sql; import os; c=sql.connect(server_hostname=os.environ['DATABRICKS_SERVER_HOSTNAME'],http_path=os.environ['DATABRICKS_HTTP_PATH'],access_token=os.environ['DATABRICKS_TOKEN']); cur=c.cursor(); cur.execute('CREATE SCHEMA IF NOT EXISTS warden'); [cur.execute(s) for s in open('databricks/setup.sql').read().split(';') if s.strip()]"
+python3 databricks/seed.py
+
+# 4. Run the live demo (fail -> heal, real Delta time-travel)
+bash warden/demo.sh
+
+# 5. Tests
+python3 -m pytest warden/ databricks/ -q
+```
 
 ## Databricks use, data sources and limitations
 Free Edition, one 2X-Small SQL warehouse, one Delta table for the demo migration target, synthetic/clearly-labeled seed data only. Delta time-travel is the rollback mechanism — this is why Databricks is essential, not incidental.
 
 ## Known limitations and next steps
-_(to fill in before submission)_
+
+**What's demonstrated today:** one Delta table, one migration, one validation check, one heal path. This is a narrow vertical slice chosen deliberately to prove the mechanism end-to-end within a one-day build, not a general migration framework.
+
+**Known limitations, disclosed rather than hidden:**
+- `RESTORE TABLE` is a metadata-only operation (it repoints the transaction log, it doesn't rewrite data), which is exactly why this approach scales to large tables in principle — but it fails outright if VACUUM has already purged the target version's files, so a production deployment needs a retention policy that guarantees the rollback window survives.
+- The validation step here is a full-table scan. At real scale that needs to become partition-scoped or incremental (validate only what the migration actually touched), not a full scan.
+- Everything today is single-migration, single-table, sequential.
+
+**Where this goes next:** the actual ambition behind Warden is a zero-downtime, parallel migration system for large, custom, and messy data setups — the kind of migration a company with a complex bespoke schema (e.g. a high-traffic consumer platform, not a clean textbook schema) can't afford to take offline for. Concretely:
+- Parallelize validation and healing across partitions/shards instead of one sequential table-level check, so a migration on a huge dataset doesn't serialize on a single validation pass.
+- A caching/staging layer so reads and writes continue against a consistent view while a migration is in flight underneath, rather than requiring a maintenance window.
+- Generalize beyond one language/stack — the checkpoint-driven intent lookup is language-agnostic by construction (it reads Entire checkpoints and Delta metadata, not application code), so the same core mechanism could sit in front of a migration pipeline written in any language.
+- Multi-migration orchestration with dependency ordering, not just one migration at a time.
+
+None of this is built today — it's the credible next step this architecture is aimed at, not a claim about what's shipped.

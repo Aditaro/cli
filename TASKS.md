@@ -55,6 +55,16 @@ Skip (don't fail) any test needing env vars that aren't set, with a clear skip r
 
 Do NOT touch `warden/` or `migrations/`. Only add `databricks/test_integration.py`. Update `## Done`/`## Blocked` when finished.
 
+## Now
+**Assigned: Codex — this is the pre-noon freeze task, ~15 min on the clock**
+
+`demo.sh` looks correct on review, but hasn't actually been re-run since your last edit. Run it for real now:
+```
+set -a; source .env; set +a
+bash warden/demo.sh
+```
+Then also run `python3 -m pytest warden/ databricks/ -q` (all tests, both dirs). Report the FULL real output (not a summary) in `## Done` below — pass/fail counts, and the actual demo.sh output showing pre/post Delta version + the logged row. If anything fails, report the exact error — don't fix it yourself, just report it clearly so Claude Code can triage fast given the time left. This is the verification evidence for the required 11:45 stable-state checkpoint, so accuracy matters more than speed here.
+
 ## Ground rules for every agent (Claude Code, opencode, Codex)
 - Use Entire yourself while you work, not just as something the product touches: run `entire graph search` / `entire graph impact` before changing code you didn't write, and check `entire checkpoint list` if you're unsure what's already been decided.
 - Write commit messages that capture *why*, not just *what* — rejected options, assumptions, anything you'd want a fresh session to know. Your commits are checkpoints; treat them like it.
