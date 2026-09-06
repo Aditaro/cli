@@ -30,7 +30,23 @@ Index: cache-miss (26413ms) | Query: 16ms | Total: 26429ms
 Completeness: no parse failures in SQL (4 files parsed); 1 elsewhere (JSON 1) cannot affect this answer
 IMPACT DEGENERATE: warden.demo_users has no callers, callees or type consumers
 ```
-This is the correct, honest answer: `demo_users` is a newly-introduced symbol, so it genuinely has no code dependents yet. Warden shows this evidence to the operator rather than silently skipping the check — `graph_impact()` degrades to an explicit "(graph impact unavailable: ...)" string on timeout/error instead of hiding the failure, per the guide's own warning that graph output is evidence, not fact. Final semantic diff to be captured at submission time from the last commit's `entire graph diff` / `entire graph commit`.
+This is the correct, honest answer: `demo_users` is a newly-introduced symbol, so it genuinely has no code dependents yet. Warden shows this evidence to the operator rather than silently skipping the check — `graph_impact()` degrades to an explicit "(graph impact unavailable: ...)" string on timeout/error instead of hiding the failure, per the guide's own warning that graph output is evidence, not fact.
+
+**Final semantic diff** (`entire graph diff --base b8c9fe619 --head HEAD`, i.e. pre-Curveball stable state → final). Real output, abridged to `warden/migrate.py` — the file the Curveball actually changed:
+```
+warden/migrate.py (Python)
+  + class LocalOnlyText added
+  + method LocalOnlyText.reveal added
+  + method LocalOnlyText.__str__ added
+  + function classify_completeness added
+  ~ function get_latest_checkpoint body changed (6 dependents)
+  ~ function ensure_log_table body changed (3 dependents)
+  ~ function log_attempt signature changed (2 dependents)
+  + function error_summary added
+  + function describe_failure added
+  ~ function apply_migration body changed (4 dependents)
+```
+This is the Curveball response expressed structurally, and it is verified against source and tests rather than quoted blind: `log_attempt`'s **signature change** is the privacy boundary itself (it gained the `context_completeness` parameter, and its 2 dependents are the applied/healed call sites in `apply_migration`); `LocalOnlyText` and `error_summary` are the two new guards; `get_latest_checkpoint`'s 6 dependents are `apply_migration` plus the five checkpoint tests that pin its degraded/redacted/unavailable behavior. Each edge named here is covered by a test in `warden/test_migrate.py`.
 
 **Curveball-targeted Graph follow-up:** `entire graph impact --repo . --symbol get_latest_checkpoint --head --profile fast` was rerun against the hardened tree and found two callers (`apply_migration` directly and `main` transitively) plus the expected dependencies (`run_entire`, `LocalOnlyText`, and `classify_completeness`). Source and unit tests verify those edges: `apply_migration` consumes the returned completeness-wrapped intent, while the checkpoint tests cover committed-checkpoint selection, unavailable Entire output, malformed JSON, and redacted intent. The corresponding `log_attempt` impact query exceeded the local 30-second Graph window in this session; source inspection and the migration tests verify its callers (`apply_migration` through applied/healed/failed paths) and its external-boundary behavior, but that unavailable Graph result is not presented as a successful finding.
 
@@ -73,6 +89,10 @@ external log note.
 - **Pre-noon stable state** (`b8c9fe619`) — required intent/architecture/risk summary before the curveball.
 - **Privacy boundary + hardening** (`cc16573cc`, `1784305b7`) — the curveball fix (`context_completeness`, local-only intent) plus a same-session follow-up that closed a second leak of the same shape (raw DB exception text reduced to its type name before crossing the external boundary) and made the intent boundary structural (`LocalOnlyText`) rather than convention-only.
 - **Post-curveball live verification + Lakeview dashboard** (`7274590b7`) — Codex confirmed live which failure path actually fires (Delta's `ADD CONSTRAINT` validation, not the manual SELECT — see Architecture) and shipped a real dashboard object via the Lakeview API.
+- **Code-review fixes from live evidence** (`4774afcbe`) — two real bugs found by an automated review pass and fixed (an `ALTER TABLE` backfill that silently swallowed genuine failures and could misclassify a healthy migration as failed; an `UnboundLocalError` when the Delta version lookup itself failed), plus a tightened redaction-marker regex. Also corrected a speculative error-name citation once the live run showed the actual error was `DELTA_NEW_CHECK_CONSTRAINT_VIOLATION`.
+- **Safe resume report** (`f8f9599e5`) — read-only checkpoint readiness CLI that reuses the existing privacy boundary rather than inventing a second one.
+
+**The four required milestones map to:** initial understanding (`28dcc3fee`) → pivot and core implementation (`666631970`, `68001846c`) → pre-Curveball stable state (`b8c9fe619`) → Curveball response and verification (`cc16573cc`, `1784305b7`, `4774afcbe`).
 
 ## Setup, run and test instructions
 ```
@@ -121,4 +141,8 @@ Free Edition, one 2X-Small SQL warehouse, one Delta table for the demo migration
 
 `python3 warden/resume_report.py <checkpoint_id>` is a narrow proof of the safe-resume-report idea: it gives a fresh operator or agent a checkpoint completeness label, migration target, safe latest-log status, and next action without exposing raw checkpoint text. A future control plane could extend that same boundary with versioned caches, Delta Change Data Feed catch-up, parallel backfills, and an optional read-only MCP surface.
 
-None of this is built today — it's the credible next step this architecture is aimed at, not a claim about what's shipped.
+**One piece of that direction is already built, as a narrow proof rather than a claim:** `python3 warden/resume_report.py <checkpoint_id>` gives a fresh operator or agent a checkpoint completeness label, migration target, safe latest-log status, and a recommended next action — without ever exposing raw checkpoint text (it never calls `LocalOnlyText.reveal()`, and a test plants a secret to prove output cannot leak it). It is a single read-only CLI, not a control plane.
+
+The rest of the direction above — versioned cache reads, Delta CDF/outbox write catch-up, compatibility-view cutover, partition-aware validation, an optional read-only MCP surface — is **not built**, and is described here as the credible next step this architecture is aimed at, not as shipped functionality.
+
+**A bounded multi-table scheduler and a privacy-safe health report were also prototyped** (`warden/orchestrate.py`, `warden/health_report.py`, on branch `handoff` past this commit). They pass unit tests but were deliberately left out of this submission commit: their accompanying seed change did not fully re-verify against the live warehouse before the deadline, and shipping an unverified change to the demo's data path was judged a worse trade than shipping the smaller, fully-verified slice. That decision is itself recorded in the checkpoint history.
