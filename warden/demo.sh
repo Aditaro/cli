@@ -2,6 +2,23 @@
 set -uo pipefail
 
 # Credentials must already be exported by the caller. Never read or print them.
+if [[ "${1:-}" == "--self-test" ]]; then
+  echo "=== Warden demo self-test (no warehouse connection) ==="
+  test -s migrations/001_add_plan_column.sql
+  test -s migrations/001_validate.sql
+  test -s warden/migrate.py
+  grep -Fq "ALTER TABLE warden.demo_users" migrations/001_add_plan_column.sql
+  grep -Fq "plan NOT IN" migrations/001_validate.sql
+  python3 databricks/seed.py --self-test
+  echo "self-test OK: migration, validation, and synthetic seed fixtures are present"
+  exit 0
+fi
+
+if [[ "$#" -ne 0 ]]; then
+  echo "usage: bash warden/demo.sh [--self-test]" >&2
+  exit 2
+fi
+
 : "${DATABRICKS_SERVER_HOSTNAME:?DATABRICKS_SERVER_HOSTNAME must be exported}"
 : "${DATABRICKS_HTTP_PATH:?DATABRICKS_HTTP_PATH must be exported}"
 : "${DATABRICKS_TOKEN:?DATABRICKS_TOKEN must be exported}"

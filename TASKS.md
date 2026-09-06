@@ -193,6 +193,14 @@ Update `## Done` when finished.
   boundary. No code was changed, no fresh-session checkpoint experiment was
   performed, and the remaining ranked gaps are still visible below.
 
+- **Codex (no-credentials path):** Added and validated
+  `bash warden/demo.sh --self-test`; it checks the migration/validation
+  fixtures and runs the synthetic seed self-test without warehouse credentials.
+  The live path remains fail-closed when credentials are absent. The earlier
+  checkpoint-only reconstruction was intentionally not counted as current-task
+  proof because its checkpoint predates this assignment; a new checkpoint-only
+  reconstruction will be recorded after this batch is committed.
+
 - **Codex (rubric self-assessment; no implementation changes):**
 
   ### Entire main challenge — 100 points

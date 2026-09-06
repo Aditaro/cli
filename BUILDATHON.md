@@ -94,6 +94,9 @@ python3 databricks/seed.py
 # 4. Run the live demo (fail -> heal, real Delta time-travel)
 bash warden/demo.sh
 
+# No credentials required: verify the migration, validation, and seed fixtures
+bash warden/demo.sh --self-test
+
 # 5. Tests
 python3 -m pytest warden/ databricks/ -q
 ```
