@@ -238,3 +238,68 @@ def test_run_entire_never_raises_on_timeout():
         out, err = run_entire(["graph", "impact", "--symbol", "x"])
     assert out is None
     assert "30" in err or "Timeout" in err or "timed out" in err.lower()
+
+
+def test_apply_migration_keeps_privacy_boundary_when_the_heal_itself_fails(tmp_path):
+    """The genuinely unrecoverable case: the migration fails AND the Delta
+    time-travel rollback fails too, leaving the table un-restored.
+
+    This is the path where the privacy boundary matters most and is hardest
+    to reason about, because TWO exceptions are in play and both can carry
+    table data (a RESTORE failure names the version and can quote row
+    state). Warden must still: record it as 'failed' rather than 'healed',
+    let only the exceptions' type names cross to Databricks, and re-raise
+    instead of silently swallowing an un-restored table.
+    """
+    migration = tmp_path / "migration.sql"
+    migration.write_text("ALTER TABLE warden.demo_users ADD CONSTRAINT c CHECK (plan IN ('free'))")
+    validate = tmp_path / "validate.sql"
+    validate.write_text("SELECT id FROM warden.demo_users WHERE plan NOT IN ('free')")
+
+    class Cursor:
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, statement, *args):
+            self.executed.append(statement)
+            if "RESTORE TABLE" in statement:
+                raise RuntimeError(
+                    "RESTORE blocked: VACUUM purged version 51, offending row plan=SENSITIVE_VALUE"
+                )
+
+        def fetchall(self):
+            return [(7, "user007@example.invalid", "legacy")]
+
+        def close(self):
+            pass
+
+    class Connection:
+        def __init__(self, cursor):
+            self._cursor = cursor
+
+        def cursor(self):
+            return self._cursor
+
+        def close(self):
+            pass
+
+    cursor = Cursor()
+    logged = []
+    with patch("migrate.get_latest_checkpoint",
+               return_value=("cp1", LocalOnlyText("SECRET_INTENT_MARKER"), "complete")), \
+         patch("migrate.graph_impact", return_value="impact"), \
+         patch("migrate.connect", return_value=Connection(cursor)), \
+         patch("migrate.current_delta_version", return_value=51), \
+         patch("migrate.log_attempt", side_effect=lambda *args: logged.append(args)):
+        with pytest.raises(RuntimeError, match="RESTORE blocked"):
+            apply_migration(str(migration), "warden.demo_users", str(validate))
+
+    # The heal was genuinely attempted before being recorded as unrecoverable.
+    assert any("RESTORE TABLE" in stmt for stmt in cursor.executed)
+
+    status, note = logged[0][2], logged[0][4]
+    assert status == "failed", "an un-restored table must never be recorded as 'healed'"
+    # Both exception types survive; neither exception's message does.
+    assert "RuntimeError" in note
+    assert "SENSITIVE_VALUE" not in note, "RESTORE error text must not cross the external boundary"
+    assert "SECRET_INTENT_MARKER" not in note, "checkpoint intent must not cross the external boundary"
