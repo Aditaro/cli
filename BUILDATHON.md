@@ -45,6 +45,19 @@ the Delta time-travel rollback. Unit tests cover complete, redacted, and
 unavailable checkpoint data and assert that raw intent is absent from the
 external log note.
 
+## Security: what's already true, and how this gets more secure from here
+
+**Already true today, not aspirational:**
+- **No secrets ever touch the repo or an external service.** `DATABRICKS_SERVER_HOSTNAME`/`HTTP_PATH`/`TOKEN` are read from env vars only (`warden/migrate.py::connect()`), sourced from a gitignored `.env`; the connector fails closed with a clear error if any are missing, and nothing in the codebase reads or prints `.env` itself.
+- **Checkpoint intent has a hard local/external boundary** (today's curveball work): the full recorded intent is only ever printed to the operator's own console. What reaches Databricks — an external service outside Entire's own trust boundary — is a sanitized summary, the checkpoint ID, and an explicit `context_completeness` label (`complete`/`redacted`/`unavailable`), so a partially-redacted checkpoint can never be mistaken for authoritative context downstream.
+- **Warden inherits Entire's own checkpoint-security substrate**, rather than re-implementing it: transcripts are redacted before they're ever written to a checkpoint (regex + entropy scanners, with an optional OpenAI Privacy Filter layer), the `.entire` directory refuses to operate through a symlink (so a malicious repo can't redirect where checkpoint data is read from or written to), and exec-bearing settings (like a custom redaction command) are only ever honored from an untracked, developer-local file — never from anything a pull request could commit. Warden's checkpoint reads (`entire checkpoint list/explain`) sit on top of all of this for free.
+
+**Where this goes next if we had more time (credible, not built):**
+- `DATABRICKS_TOKEN` here is a long-lived personal token for demo purposes; a real deployment should use a Databricks service principal with a short-lived OAuth token instead.
+- `checkpoint_id` in `migration_log` is an unsigned string today — anyone with warehouse write access could forge one. An HMAC over `(checkpoint_id, migration_name)`, signed with a key that never leaves the machine running Warden, would let a reader verify a log row's checkpoint claim without trusting the warehouse.
+- `migrate.py` currently has no access gate of its own — any user holding the three env vars can apply a migration. A real deployment should require the migration to reference a checkpoint that's already been reviewed/merged (not just the latest one), turning "checkpoint-driven" into "checkpoint-authorized."
+- The `note` column in `warden.migration_log` is plaintext; column-level encryption or Unity Catalog row/column ACLs would let the security team restrict who can read even the sanitized failure summaries, not just who can write them.
+
 ## Checkpoint links and what each checkpoint proves
 - **Initial understanding** (`28dcc3fee`) — original architecture (Handoff), before the pivot.
 - **Pivot** (`666631970`) — rejected Handoff, chose Warden, with the rubric-based reasoning recorded.
