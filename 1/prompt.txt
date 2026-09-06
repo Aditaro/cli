@@ -1,0 +1,19 @@
+ok opencode is not working using gemini cli instead for now, and will tell it to reger to opencode, also waht are the next steps and what is the current state of everything, what should i tell codex to do
+
+---
+
+also right now it is just you and codex and one more thing for track 1 what was mentioned that is they wnat to know how are we making it secure iwth teh checkpoints and abding by everythinga sa hwole. 
+
+and i dont understand waht you mean by the fixture file and everything
+
+---
+
+what should i ask the judges right now that will help you
+
+---
+
+also in 2 lines can you summarize what we are doing for track 1 and our submission as a whole
+
+---
+
+what i was told that is that there is not specific security thing that was required, and that we have to show them how our thing is more secure or can be more secure and such if that makes sense for you
