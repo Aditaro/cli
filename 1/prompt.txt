@@ -416,3 +416,15 @@ Prioritized findings:
 No overclaims, no failing instructions, no invented capabilities found. Fix #1 if you have minutes; #2 and #3 are cosmetic.</result>
 <usage><subagent_tokens>418038</subagent_tokens><tool_uses>5</tool_uses><duration_ms>44536</duration_ms></usage>
 </task-notification>
+
+---
+
+na dont worry about it will try pushing for a better submission until the end, and we have safe ones to submit so i am not worried about that
+
+---
+
+if there is a placeholder for future scope mention that we would like to be able to do this with multiple tables and parallize more and get live updates and have the user have the option to input and manage more data inbetween and adjust certain things, like change keys or conglomerate or split exisitng tables and such
+
+---
+
+also check whatever codex has done
