@@ -217,9 +217,11 @@ Update `## Done` when finished.
     `ServerOperationError` note, and demo exit `0`.
   - Final live suite: `19 passed in 7.23s` (`16` local plus `3` live
     integration tests), pytest exit `0`.
-  - Final dashboard access check returned HTTP `303`, confirming the published
-    workspace URL is reachable rather than a 404. The recording safety scan
-    found no token or `.env` content.
+  - Final dashboard access check returned HTTP `303` to the expected Databricks
+    login route (with the dashboard as `next_url`), rather than a 404; the
+    authenticated Lakeview API then returned HTTP `200` for the dashboard ID,
+    display name `Warden Migration Health`, lifecycle `ACTIVE`. The recording
+    safety scan found no token or `.env` content.
 
 - **Codex (rubric self-assessment; no implementation changes):**
 
