@@ -1,0 +1,103 @@
+lets be ambitous but smart with how we develop it so that we make proper systematic progress and ensure that we hae throughput and are moving closer to the goals as a whole and getting the stages of our plan for this done, is codex ready? ill open a new terminal and set it up and give me the prompt to initilize it, and also tell me how you want me to you the two of you
+
+---
+
+<task-notification>
+<task-id>bw652n390</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/aa3dd48f-da00-4a98-b800-6d821de6d1bb/tasks/bw652n390.output</output-file>
+<status>completed</status>
+<summary>Background command "Install the Databricks SQL connector for Python" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>bzxd5kp6g</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/aa3dd48f-da00-4a98-b800-6d821de6d1bb/tasks/bzxd5kp6g.output</output-file>
+<status>failed</status>
+<summary>Background command "Install the real OpenAI Codex CLI" failed with exit code 1</summary>
+</task-notification>
+
+---
+
+ok dw ill install it you continue with everythinge else, stop doing it yourself, for now continue working also is it redundant to have a md that you use as a shared memory even with entire set up for use and everyhting
+
+---
+
+<task-notification>
+<task-id>bfp1kdb2f</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/aa3dd48f-da00-4a98-b800-6d821de6d1bb/tasks/bfp1kdb2f.output</output-file>
+<status>completed</status>
+<summary>Background command "Smoke-test the checkpoint and graph-impact functions against the real repo" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>bvd6aoqtz</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/aa3dd48f-da00-4a98-b800-6d821de6d1bb/tasks/bvd6aoqtz.output</output-file>
+<status>completed</status>
+<summary>Background command "Reinstall OpenAI Codex CLI" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+ok codex is up and running i gave it the prompt you gave me what do we do next
+
+---
+
+both of you should use entire to manage and use its power to the best of its abilites as a whole and ensure that everything is gucci
+
+---
+
+REDACTED
+
+---
+
+how do i get my server hostname and http path and at the same time databricks has a migration feature, is our work redundant, and how can we make the case that it is can be used at scale on the scale of petabytes and with massive workloads and such
+
+---
+
+set set how do i ge tyou the server and http path
+
+---
+
+done check
+
+---
+
+done 
+
+my intention of this is to be able to levy the entire's coding context and management system use agents and be able to use the tools and setup that databricks provides and the datalake software that is present, to be able to handle large scale and super compelte datastrucutes and such and manage, and if a company wants to be abel to do it in rust ot whatever, or even a usecase sucha s chess.com to migrate their data and such because their data set up is complex and custom. that my goal with this is to be able to address that and be able to self heal and do it in parallel, so that the company doesnt have to stop operations just because of the mgiration, so this will involve cache and a very smart way to do distributed data management
+
+---
+
+also what and how should we use and maek sure codex starts working
+
+---
+
+<task-notification>
+<task-id>b03gywvle</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/aa3dd48f-da00-4a98-b800-6d821de6d1bb/tasks/b03gywvle.output</output-file>
+<status>completed</status>
+<summary>Background command "Seed the demo_users table with real synthetic data" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>bqsaay7az</task-id>
+<tool-use-id>toolu_01XoBZJbkUojU4ZXWoHFquPC</tool-use-id>
+<output-file>/tmp/claude-1000/-home-adit-Desktop-Coding-BTW-Buildathon/aa3dd48f-da00-4a98-b800-6d821de6d1bb/tasks/bqsaay7az.output</output-file>
+<status>failed</status>
+<summary>Background command "Run Warden against the real Databricks table -- this should fail validation and self-heal" failed with exit code 1</summary>
+</task-notification>
+
+---
+
+also can you setup omniroute for youself so that we can actually power through this and get htis doena dn also levy entire as a whole to get the development for this doena s awhole
