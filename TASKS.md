@@ -107,24 +107,38 @@ Do this as a normal commit with a message covering those four points (Entire's h
 Update `## Done` when finished — this is likely the last task before submission, so also flag anything you think still needs attention before 3pm.
 
 ## Now
-**Assigned: Codex — score-improvement pass, we have time and budget left, use it**
+**Assigned: Codex — score-improvement pass, using the REAL organizer rubric (superseding the previous version of this task, which used a reconstructed guess — ignore that one, this is the actual scoring sheet)**
 
-We do NOT have the organizers' exact rubric with weights — nobody in this session has seen a written scoring sheet. What we do know, from the pivot commit (`git show 666631970`) and BUILDATHON.md's own framing, is the category *names*: **Problem/Innovation**, **Technical Implementation**, **Demo**, **Use of Entire** (checkpoint-native workflow + Entire Graph impact analysis — this is Track 1's whole point), and the optional secondary **Use of Databricks** award. Don't invent weights or percentages we don't have — grade against the category names honestly and say where you're guessing.
+Two separate 100-point rubrics apply to this submission — the main challenge, and the optional secondary Databricks award (we're opted into both). Grade against these exact weights, not vibes.
 
-### Step 1 — brutally honest self-assessment (do this first, before touching code)
+**Entire main challenge — 100 pts:**
+- Problem and innovation — 20 — clear user, specific problem, useful new capability, real use of Entire
+- Technical implementation — 25 — working end-to-end workflow, sensible architecture, important behaviors tested, failures handled safely
+- Response to the Curveball — 15 — constraint addressed completely, assumptions revisited, response implemented/tested/explained
+- Use of Entire Checkpoints — 15 — checkpoints preserve useful intent/decision context, a fresh session can resume from them
+- Use of Entire Graph — 15 — graph evidence identifies relevant code or impact, findings verified against source and tests
+- Demonstration and future potential — 10 — clear reproducible demo, limits acknowledged, credible next step
 
-Go category by category. For each: what's actually built, what a skeptical judge would say is thin or missing, and a 1-10 gut score with one sentence of justification. Do not soften this — if something is a demo trick rather than a real capability, say so. Cover at minimum:
-- **Problem/Innovation**: is the core trick (Delta time-travel + checkpoint-driven explanation) actually novel, or is it "one line of SQL any DBA already has, wrapped in automation"? Say which.
-- **Technical Implementation**: one table, one migration, one validation path, 16 unit tests, real live verification — is that solid-but-narrow, or thin?
-- **Demo**: `warden/demo.sh` is one-command and has been run live successfully — but has anyone actually rehearsed narrating it out loud against a clock, or just run it silently? A working script and a good live demo are not the same thing.
-- **Use of Entire**: are checkpoints load-bearing (the healing explanation genuinely depends on `entire checkpoint explain`) or decorative? Is `entire graph impact` used meaningfully, or just run once to check a box (see the existing "IMPACT DEGENERATE: no callers" finding in BUILDATHON.md — is that a strength — honest reporting — or a weakness — the graph found nothing useful)?
-- **Use of Databricks** (secondary award): be specific — Delta time-travel and the CHECK constraint are genuinely Databricks-native; the seed table, the connector calls, and the dashboard chart are generic and would work identically against Postgres. What fraction of the Databricks surface area is actually load-bearing vs. incidental?
+**Best Use of Databricks — 100 pts:**
+- Meaningful use — 30 — Databricks essential to a core workflow, materially improves the product
+- Working implementation and reliability — 25 — judges can reproduce/inspect the path, failure handling and fallback evidence are credible
+- User value and product decisions — 20 — specific user need, focused scope, sensible trade-offs
+- Data quality, provenance and responsible use — 15 — permitted data, traceable transformations, disclosed limits, safe handling
+- Curveball response — 10 — the Databricks-backed workflow adapts to the new constraint and the changed behavior is verified
 
-Write this as a short markdown block under `## Done` below — don't hold back to be polite, this is meant to find real gaps with ~2 hours and budget left to fix them.
+### Step 1 — brutally honest self-assessment against BOTH rubrics (do this first, before touching code)
 
-### Step 2 — turn the gaps into a ranked task list
+For every line item above (11 total across both rubrics): a 1-10 gut score, what's actually built that earns it, and what a skeptical judge would dock points for. Do not soften this — if something reads as a demo trick rather than the real thing the criterion asks for, say so explicitly. A few specific traps to check honestly, not just restate as strengths:
+- "Use of Entire Checkpoints" (15 pts) explicitly asks whether **a fresh session can resume from them** — has anyone actually tested that a genuinely fresh agent session, given only the repo and a checkpoint ID, can reconstruct enough to continue? Or has intent-reading only ever been exercised by Warden's own code path (`get_latest_checkpoint()`), never by a human/agent doing the literal thing the criterion describes?
+- "Use of Entire Graph" (15 pts) requires findings **verified against source and tests** — the one real graph run so far reported "IMPACT DEGENERATE: no callers" for `demo_users`. Is that finding actually verified against source (confirmed it's a genuinely new symbol with no dependents), or just quoted as-is? Was `entire graph impact` ever run on `get_latest_checkpoint`/`log_attempt` themselves (the functions the curveball actually touched) the way the curveball instructions originally asked, or only on `demo_users`?
+- "Data quality, provenance and responsible use" (15 pts, Databricks rubric) — is there a clear written statement (not just code comments) of what's synthetic, how it was generated, and what its limits are, in a place a judge would actually look (BUILDATHON.md), not buried in a script docstring?
+- "Meaningful use" (30 pts, Databricks rubric, the single biggest line item across both rubrics) — be specific about what fraction of Databricks usage is load-bearing (Delta time-travel, the CHECK constraint) vs. incidental (a generic connector call that would work against Postgres). This is the single highest-leverage item to strengthen if there's a real gap.
 
-From your own Step 1 assessment, list concrete, buildable-in-under-30-minutes-each improvements, ranked by expected score impact per category. Do NOT implement yet — just list them with: which category it helps, rough time estimate, and one sentence on why it moves the needle (not just "more tests" — specifically what gap it closes). Claude Code will review the list and assign back whichever ones are worth the remaining time.
+Write this as a markdown block under `## Done` below, organized by rubric then by line item, each with a score and one or two sentences of justification.
+
+### Step 2 — turn real gaps into a ranked task list
+
+From Step 1, list concrete, buildable-in-under-30-minutes-each improvements. For each: which line item(s) it helps, its point value, rough time estimate, and specifically what gap it closes (not "more tests" — which behavior becomes tested that wasn't). Rank by points-per-minute, not by category order — a 30-point item worth 20 minutes of work beats a 10-point item worth 15. Do NOT implement yet. Claude Code will review the list and assign back whichever earn their time.
 
 Do NOT touch `warden/migrate.py` for this task — assessment and a list only.
 
