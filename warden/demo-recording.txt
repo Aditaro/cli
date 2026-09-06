@@ -1,0 +1,58 @@
+Script started on 2026-09-06 13:46:36+05:30 [<not executed on terminal>]
+=== Pre-migration Delta version ===
+Delta version: 51
+=== Apply migration and validate (healing on failure) ===
+[warden] intent from checkpoint 01M1TWD4BP5ZTG9SJWHM7BJNZP [context: complete]:
+● Checkpoint 01M1TWD4BP5ZTG9SJWHM7BJNZP
+  session  01a0757c-b060-7432-b490-f0374c27d783
+  created  2026-09-06 08:12:24
+  author   Adit Potta <27315597+Aditaro@users.noreply.github.com>
+  tokens   2375.3k
+  commits  8316ecf docs: add reproducibility evidence and demo self-test
+────────────────────────────────────────────────────────────
+## Intent
+
+Still in flight with Codex (from the same approved batch):
+3. Fresh-session c...
+
+## Summary
+
+*Not generated yet. Run ‘entire checkpoint explain --generate 01M1TWD4BP5ZTG9SJWHM7BJNZP‘ to create an AI summary.*
+
+[warden] Entire Graph impact on 'demo_users' (evidence, not fact -- verify before trusting):
+Index: cache-miss (27477ms) | Query: 31ms | Total: 27508ms
+Completeness: no parse failures in SQL (4 files parsed); 1 elsewhere (JSON 1) cannot affect this answer — see --format json.
+IMPACT DEGENERATE: warden.demo_users has no callers, callees or type consumers
+
+[warden] 'warden.demo_users' currently at Delta version 51
+[warden] FAILURE: [DELTA_NEW_CHECK_CONSTRAINT_VIOLATION] 1 rows in workspace.warden.demo_users violate the new CHECK constraint (plan IN ('free', 'pro', 'enterprise')).
+[warden] healing: restoring 'warden.demo_users' to Delta version 51 via time-travel...
+
+[warden] Migration 'migrations/001_add_plan_column.sql' failed: [DELTA_NEW_CHECK_CONSTRAINT_VIOLATION] 1 rows in workspace.warden.demo_users violate the new CHECK constraint (plan IN ('free', 'pro', 'enterprise')).
+
+Recorded intent (checkpoint 01M1TWD4BP5ZTG9SJWHM7BJNZP, context: complete):
+● Checkpoint 01M1TWD4BP5ZTG9SJWHM7BJNZP
+  session  01a0757c-b060-7432-b490-f0374c27d783
+  created  2026-09-06 08:12:24
+  author   Adit Potta <27315597+Aditaro@users.noreply.github.com>
+  tokens   2375.3k
+  commits  8316ecf docs: add reproducibility evidence and demo self-test
+────────────────────────────────────────────────────────────
+## Intent
+
+Still in flight with Codex (from the same approved batch):
+3. Fresh-session c...
+
+## Summary
+
+*Not generated yet. Run ‘entire checkpoint explain --generate 01M1TWD4BP5ZTG9SJWHM7BJNZP‘ to create an AI summary.*
+
+Action taken: rolled back warden.demo_users to Delta version 51. The intent above is what this migration was trying to achieve -- use it to write a corrected migration rather than re-attempting blindly.
+=== Most recent migration log row ===
+id | migration_name | status | checkpoint_id | note | context_completeness | ts
+d1ba0977-4c19-44b1-8379-b0db66f5a6f4 | migrations/001_add_plan_column.sql | healed | 01M1TWD4BP5ZTG9SJWHM7BJNZP | migration failed (ServerOperationError); rolled back warden.demo_users to Delta version 51. Checkpoint intent and full error detail kept local-only (context: complete); see operator console for detail. | complete | 2026-09-06 08:17:44.187013+00:00
+=== Post-migration Delta version ===
+Delta version: 51
+Demo completed: validation failed and Warden healed the table.
+
+Script done on 2026-09-06 13:48:03+05:30 [COMMAND_EXIT_CODE="0"]

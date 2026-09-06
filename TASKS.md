@@ -200,6 +200,26 @@ Update `## Done` when finished.
   checkpoint-only reconstruction was intentionally not counted as current-task
   proof because its checkpoint predates this assignment; a new checkpoint-only
   reconstruction will be recorded after this batch is committed.
+- **Codex (final submission checks):** Completed the remaining checklist items.
+  - A clean `git archive HEAD` checkout passed
+    `bash warden/demo.sh --self-test` and `python3 -m pytest warden/ databricks/ -q`
+    with `16 passed, 3 skipped in 0.10s` and no credentials.
+  - A genuinely fresh environment (`env -i` with only normal process
+    essentials) ran `entire checkpoint explain
+    01M1TWD4BP5ZTG9SJWHM7BJNZP --no-pager`; using only that checkpoint ID it
+    reconstructed the approved batch, touched files, self-test work, and the
+    next action. The checkpoint is `01M1TWD4BP5ZTG9SJWHM7BJNZP` from commit
+    `8316ecfc0`.
+  - Final live run was recorded in `warden/demo-recording.txt` and passed:
+    pre/post Delta version `51`, expected
+    `DELTA_NEW_CHECK_CONSTRAINT_VIOLATION` heal, latest row
+    `status=healed`, `context_completeness=complete`, sanitized
+    `ServerOperationError` note, and demo exit `0`.
+  - Final live suite: `19 passed in 7.23s` (`16` local plus `3` live
+    integration tests), pytest exit `0`.
+  - Final dashboard access check returned HTTP `303`, confirming the published
+    workspace URL is reachable rather than a 404. The recording safety scan
+    found no token or `.env` content.
 
 - **Codex (rubric self-assessment; no implementation changes):**
 
