@@ -134,6 +134,29 @@ Then also run `python3 -m pytest warden/ databricks/ -q` (all tests, both dirs).
   ```
   This is an environment/connectivity blocker for the live demo, not a code
   change; no fixes were made per the freeze instruction.
+- **Noon Curveball — Track 1 Privacy Boundary (committed `cc16573cc`):**
+  `get_latest_checkpoint()` now returns `(cp_id, intent, completeness)`, where
+  `completeness` is `"complete" | "redacted" | "unavailable"` (redacted is
+  detected via Entire's own `REDACTED` marker text surviving into `--short`
+  output). `log_attempt()`/`warden.migration_log` gained a
+  `context_completeness` column (with a best-effort `ALTER TABLE` backfill for
+  an already-existing live table). The raw checkpoint intent is now only ever
+  printed to the local console; the new `describe_failure()` builds a separate,
+  external-safe `db_note` for the Databricks row that never contains intent
+  text, redacted or not — only the checkpoint id and its completeness label.
+  Existing applied/failed/healed behavior and the Delta time-travel rollback
+  are unchanged. New unit tests cover a redacted-intent checkpoint, a fully
+  unavailable checkpoint, and assert the db_note never leaks intent text even
+  when intent is fully available. `python3 -m pytest warden/ databricks/ -q`:
+  **10 passed, 3 skipped**.
+  - **Deviation worth flagging:** Claude Code, Codex, and OpenCode were all
+    started on this exact curveball prompt at the same time and ended up
+    editing `warden/migrate.py` concurrently — several rounds of the file
+    changing out from under each edit before converging on the version above.
+    The commit landed correctly and tests pass, but this wasn't a clean single-
+    owner edit; worth avoiding next time by having one agent own a file for a
+    given task instead of pointing multiple agents at the same reconstruction
+    task simultaneously.
 
 ## Blocked / open questions
 _(none yet)_
