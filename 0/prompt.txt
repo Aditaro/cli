@@ -1,0 +1,15 @@
+i have exactly one hour left, what can we get done technically, claude is worried about time, but i think parallely we can get it done check tasks.md
+
+---
+
+i want to do more devleopment given that we actually do have a lot more time left and i think we can actually do more and make this even more solid based on the jdugemet criteria and as a project as a whole
+
+---
+
+i want you to judge this brutally by yourself based on the rubric and tell me how our work scores, be as unbiased as possible
+
+---
+
+also in terms of develpment i would like to parallelize this and try to optimize for speed and be agnostic of various different features, wtherh that be rewriting things and it should also be able to adapt to various usecases as a whole. 
+
+and i want you to work on and address whatever things that have low scores so that we hvae a full score in our boosk and can say that we tried our level best and update tasks.md
